@@ -36,57 +36,55 @@ export default function Hero() {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary-200/10 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-8 md:py-20">
         {/* Badge */}
-        <div className="flex justify-center mb-10 animate-fade-in">
-          <div className="flex items-center space-x-2 bg-white/95 backdrop-blur-md px-6 py-3 rounded-full shadow-2xl border border-white/50">
-            <Leaf className="text-primary-500" size={22} />
-            <span className="text-sm font-semibold text-gray-800">Fresh Ingredients Daily</span>
+        <div className="flex justify-center mb-4 md:mb-10 animate-fade-in">
+          <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/95 backdrop-blur-md px-3 py-1.5 md:px-6 md:py-3 rounded-full shadow-2xl border border-white/50">
+            <Leaf className="text-primary-500 w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-xs md:text-sm font-semibold text-gray-800">Fresh Ingredients Daily</span>
           </div>
         </div>
 
-
-
         {/* Main Heading */}
-        <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 drop-shadow-2xl animate-fade-in animation-delay-400">
+        <h1 className="text-3xl md:text-5xl lg:text-7xl font-extrabold text-white mb-3 md:mb-6 drop-shadow-2xl animate-fade-in animation-delay-400">
           <span className="text-primary-600">
             ToTea
           </span>
         </h1>
 
-        <p className="text-3xl md:text-4xl font-bold text-white mb-6 drop-shadow-xl animate-fade-in animation-delay-600">
+        <p className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-3 md:mb-6 drop-shadow-xl animate-fade-in animation-delay-600">
           Premium Bubble Tea & Coffee
         </p>
         
-        <p className="text-xl md:text-2xl text-white/95 mb-12 max-w-3xl mx-auto drop-shadow-lg leading-relaxed animate-fade-in animation-delay-800">
+        <p className="text-sm md:text-xl lg:text-2xl text-white/95 mb-6 md:mb-12 max-w-3xl mx-auto drop-shadow-lg leading-relaxed animate-fade-in animation-delay-800 px-2">
           Crafted with passion, served with love. Experience the perfect blend of traditional flavors and modern innovation.
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-5 justify-center items-center mb-16 animate-fade-in animation-delay-1000">
+        <div className="flex flex-col sm:flex-row gap-3 md:gap-5 justify-center items-center mb-8 md:mb-16 animate-fade-in animation-delay-1000">
           <a
             href="#order"
-            className="group bg-primary-400 text-white px-10 py-5 rounded-full hover:bg-primary-500 transition-all transform hover:scale-110 shadow-2xl font-bold text-lg flex items-center space-x-3 border-2 border-white/30"
+            className="group bg-primary-400 text-white px-6 py-3 md:px-10 md:py-5 rounded-full hover:bg-primary-500 transition-all transform hover:scale-110 shadow-2xl font-bold text-sm md:text-lg flex items-center space-x-2 md:space-x-3 border-2 border-white/30 w-full sm:w-auto justify-center"
           >
             <span>Order Now</span>
-            <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
           </a>
           <a
             href="/menu"
-            className="bg-white/95 backdrop-blur-md text-primary-600 px-10 py-5 rounded-full hover:bg-white transition-all transform hover:scale-110 border-2 border-white/50 font-bold text-lg shadow-2xl"
+            className="bg-white/95 backdrop-blur-md text-primary-600 px-6 py-3 md:px-10 md:py-5 rounded-full hover:bg-white transition-all transform hover:scale-110 border-2 border-white/50 font-bold text-sm md:text-lg shadow-2xl w-full sm:w-auto text-center"
           >
             View Menu
           </a>
         </div>
 
         {/* Features */}
-        <div className="flex flex-wrap justify-center items-center gap-6 text-base animate-fade-in animation-delay-1200">
-          <div className="flex items-center space-x-2 bg-white/25 backdrop-blur-md px-6 py-3 rounded-full border border-white/30 shadow-lg">
-            <Coffee className="text-white" size={20} />
+        <div className="flex flex-wrap justify-center items-center gap-3 md:gap-6 text-xs md:text-base animate-fade-in animation-delay-1200">
+          <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/25 backdrop-blur-md px-3 py-1.5 md:px-6 md:py-3 rounded-full border border-white/30 shadow-lg">
+            <Coffee className="text-white w-4 h-4 md:w-5 md:h-5" />
             <span className="font-semibold text-white">Fresh Daily</span>
           </div>
-          <div className="flex items-center space-x-2 bg-white/25 backdrop-blur-md px-6 py-3 rounded-full border border-white/30 shadow-lg">
-            <Leaf className="text-white" size={20} />
+          <div className="flex items-center space-x-1.5 md:space-x-2 bg-white/25 backdrop-blur-md px-3 py-1.5 md:px-6 md:py-3 rounded-full border border-white/30 shadow-lg">
+            <Leaf className="text-white w-4 h-4 md:w-5 md:h-5" />
             <span className="font-semibold text-white">Premium Ingredients</span>
           </div>
         </div>
