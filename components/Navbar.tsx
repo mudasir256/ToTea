@@ -16,22 +16,25 @@ export default function Navbar() {
             <img
               src="/logo3.png"
               alt="ToTea Bubble Tea Logo"
-              width={80}
-              height={80}
+              width={150}
+              height={150}
               className="object-contain"
             />
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/#menu" className="text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base">
+            <Link href="/" className="text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base">
+              Home
+            </Link>
+            <Link href="/menu" className="text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base">
               Menu
             </Link>
-            <Link href="/#locations" className="text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base">
-              Locations
-            </Link>
-            <Link href="/#about" className="text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base">
+            <Link href="/about" className="text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base">
               About
+            </Link>
+            <Link href="/contact" className="text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base">
+              Contact
             </Link>
             <a
               href="#order"
@@ -55,25 +58,32 @@ export default function Navbar() {
         {isOpen && (
           <div className="md:hidden pb-6 space-y-4 pt-2">
             <Link
-              href="/#menu"
+              href="/"
+              className="block text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base py-2"
+              onClick={() => setIsOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
+              href="/menu"
               className="block text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base py-2"
               onClick={() => setIsOpen(false)}
             >
               Menu
             </Link>
             <Link
-              href="/#locations"
-              className="block text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base py-2"
-              onClick={() => setIsOpen(false)}
-            >
-              Locations
-            </Link>
-            <Link
-              href="/#about"
+              href="/about"
               className="block text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base py-2"
               onClick={() => setIsOpen(false)}
             >
               About
+            </Link>
+            <Link
+              href="/contact"
+              className="block text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base py-2"
+              onClick={() => setIsOpen(false)}
+            >
+              Contact
             </Link>
             <a
               href="#order"
