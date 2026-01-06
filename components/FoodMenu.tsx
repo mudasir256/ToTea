@@ -1,8 +1,22 @@
 'use client'
 
-import { Coffee, Utensils, Clock } from 'lucide-react'
+import { Coffee, Utensils, Clock, ShoppingCart } from 'lucide-react'
+import { useCart } from '@/contexts/CartContext'
 
 export default function FoodMenu() {
+  const { addToCart } = useCart()
+
+  const handleAddToCart = (name: string, description: string, image: string, category: string) => {
+    addToCart({
+      id: `${category}-${name.toLowerCase().replace(/\s+/g, '-')}`,
+      name: name,
+      description: description,
+      price: 7.99, // Default price for food items
+      image: image,
+      category: category,
+    })
+  }
+
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -48,9 +62,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Croissants</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   Buttery and flaky croissants baked daily! Choose from Butter Croissant, Chocolate, or Spinach & Feta.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Croissants', 'Buttery and flaky croissants baked daily! Choose from Butter Croissant, Chocolate, or Spinach & Feta.', '/images/PARK-9-scaled.jpg', 'Breakfast Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -71,9 +92,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Ube Coconut Croissant</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   A buttery croissant filled with rich ube mascarpone spread and sweet shredded coconut—a dreamy, tropical twist.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Ube Coconut Croissant', 'A buttery croissant filled with rich ube mascarpone spread and sweet shredded coconut—a dreamy, tropical twist.', '/images/PARK-12-1638x2048.jpg', 'Breakfast Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -94,9 +122,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Pandan Croissant</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   A flaky croissant filled with creamy pandan mascarpone and sweet shredded coconut—vibrant and aromatic.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Pandan Croissant', 'A flaky croissant filled with creamy pandan mascarpone and sweet shredded coconut—vibrant and aromatic.', '/images/PARK-13-1638x2048.jpg', 'Breakfast Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -117,9 +152,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Hot Honey Chicken Croissant</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   A croissant sandwich filled with crispy chicken and drizzled with our house-made hot honey. Bold, sweet-heat kick.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Hot Honey Chicken Croissant', 'A croissant sandwich filled with crispy chicken and drizzled with our house-made hot honey. Bold, sweet-heat kick.', '/images/PARK-16-1638x2048.jpg', 'Breakfast Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -140,9 +182,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Sausage, Egg & Cheese Croissant</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   Savory turkey sausage, scrambled egg, and American cheddar between a choice of brioche or croissant bun.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Sausage, Egg & Cheese Croissant', 'Savory turkey sausage, scrambled egg, and American cheddar between a choice of brioche or croissant bun.', '/images/PRK-13-1638x2048.jpg', 'Breakfast Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -163,9 +212,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Egg & Cheese Croissant</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   Classic scrambled egg and American cheddar in a buttery croissant.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Egg & Cheese Croissant', 'Classic scrambled egg and American cheddar in a buttery croissant.', '/images/PRK-18-1638x2048.jpg', 'Breakfast Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
           </div>
@@ -209,9 +265,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Hot Honey Chicken Sandwich</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   Drizzled with our house-made hot honey, crafted with signature sate.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Hot Honey Chicken Sandwich', 'Drizzled with our house-made hot honey, crafted with signature sate.', '/images/PRK-27-scaled.jpg', 'All Day Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -232,9 +295,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Basil Popcorn Chicken</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   Marinated in garlic and spices and fried to ultra crispiness. Can be mild or spicy.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Basil Popcorn Chicken', 'Marinated in garlic and spices and fried to ultra crispiness. Can be mild or spicy.', '/images/PRK-32-scaled-e1751401727612.jpg', 'All Day Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -255,9 +325,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Taiwanese Chicken Sandwich</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   Marinated in garlic and spices and fried to ultra crispiness. Can be mild or spicy.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Taiwanese Chicken Sandwich', 'Marinated in garlic and spices and fried to ultra crispiness. Can be mild or spicy.', '/images/PRK-37-scaled.jpg', 'All Day Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -278,9 +355,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Garlic Parmesan Fries</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   Crispy fries tossed with garlic and parmesan. Can be mild or spicy.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Garlic Parmesan Fries', 'Crispy fries tossed with garlic and parmesan. Can be mild or spicy.', '/images/PRK-38-1638x2048.jpg', 'All Day Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
 
@@ -301,9 +385,16 @@ export default function FoodMenu() {
               </div>
               <div className="p-6 flex-1 flex flex-col bg-white group-hover:bg-gradient-to-br group-hover:from-primary-50 group-hover:to-primary-100 transition-all duration-500">
                 <h4 className="text-xl font-bold text-gray-900 group-hover:text-primary-600 transition-colors mb-3">Plain Fries</h4>
-                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">
+                <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">
                   Classic crispy fries. Can be mild or spicy.
                 </p>
+                <button
+                  onClick={() => handleAddToCart('Plain Fries', 'Classic crispy fries. Can be mild or spicy.', '/images/PRK-48-scaled-e1758558138889-1631x2048.jpg', 'All Day Bites')}
+                  className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                >
+                  <ShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
               </div>
             </div>
           </div>

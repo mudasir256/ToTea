@@ -1,6 +1,7 @@
 'use client'
 
-import { Coffee, Leaf, Snowflake, Cookie } from 'lucide-react'
+import { Coffee, Leaf, Snowflake, Cookie, ShoppingCart } from 'lucide-react'
+import { useCart } from '@/contexts/CartContext'
 
 interface MenuItem {
   name: string
@@ -258,6 +259,19 @@ const menuData: MenuCategory[] = [
 ]
 
 export default function MenuSection() {
+  const { addToCart } = useCart()
+
+  const handleAddToCart = (item: MenuItem, category: string) => {
+    addToCart({
+      id: `${category}-${item.name.toLowerCase().replace(/\s+/g, '-')}`,
+      name: item.name,
+      description: item.description,
+      price: 5.99, // Default price, you can customize per item
+      image: item.image,
+      category: category,
+    })
+  }
+
   return (
     <section id="menu" className="py-20 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -322,7 +336,14 @@ export default function MenuSection() {
                           </span>
                         )}
                       </div>
-                      <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors">{item.description}</p>
+                      <p className="text-gray-600 group-hover:text-gray-700 leading-relaxed text-sm flex-1 transition-colors mb-4">{item.description}</p>
+                      <button
+                        onClick={() => handleAddToCart(item, category.title)}
+                        className="mt-auto w-full bg-primary-400 text-white px-4 py-2 rounded-lg hover:bg-primary-500 transition-colors font-semibold flex items-center justify-center space-x-2 text-sm"
+                      >
+                        <ShoppingCart size={16} />
+                        <span>Add to Cart</span>
+                      </button>
                     </div>
                   </div>
                 ))}

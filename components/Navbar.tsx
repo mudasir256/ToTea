@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Menu, X, ShoppingBag, Coffee } from 'lucide-react'
+import { Menu, X, ShoppingCart, Coffee } from 'lucide-react'
 import Link from 'next/link'
+import { useCart } from '@/contexts/CartContext'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const { getTotalItems, setIsCartOpen } = useCart()
+  const cartItemCount = getTotalItems()
 
   return (
     <nav className="fixed top-0 w-full bg-white shadow-lg z-50 border-b border-gray-200">
@@ -37,7 +40,7 @@ export default function Navbar() {
                 >
                   ToTea
                 </span>
-                <span className="text-[10px] md:text-xs text-gray-600 leading-tight">bubble tea</span>
+                <span className="text-[10px] md:text-xs text-[#77c7a0] leading-tight">bubble tea</span>
               </div>
             </div>
           </Link>
@@ -55,13 +58,19 @@ export default function Navbar() {
             <Link href="/contact" className="text-gray-800 hover:text-primary-500 transition-colors font-semibold text-base">
               Contact
             </Link>
-            <a
-              href="#order"
-              className="bg-primary-400 text-white px-8 py-3 rounded-full hover:bg-primary-500 transition-all transform hover:scale-105 font-semibold flex items-center space-x-2 shadow-lg text-base"
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative bg-primary-400 text-white px-4 py-3 rounded-full hover:bg-primary-500 transition-all transform hover:scale-105 font-semibold flex items-center space-x-2 shadow-lg text-base"
+              aria-label="Open cart"
             >
-              <ShoppingBag size={20} />
-              <span>Order Online</span>
-            </a>
+              <ShoppingCart size={20} />
+              <span className="hidden sm:inline">Cart</span>
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {cartItemCount > 9 ? '9+' : cartItemCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Mobile menu button */}
@@ -130,16 +139,26 @@ export default function Navbar() {
             >
               Contact
             </Link>
-            <a
-              href="#order"
-              className={`block bg-primary-400 text-white px-8 py-3 rounded-full hover:bg-primary-500 transition-all font-semibold text-center shadow-lg text-base transform ${
+            <button
+              onClick={() => {
+                setIsCartOpen(true)
+                setIsOpen(false)
+              }}
+              className={`relative block w-full bg-primary-400 text-white px-8 py-3 rounded-full hover:bg-primary-500 transition-all font-semibold text-center shadow-lg text-base transform ${
                 isOpen ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-95'
               }`}
               style={{ transitionDelay: isOpen ? '0.3s' : '0s' }}
-              onClick={() => setIsOpen(false)}
             >
-              Order Online
-            </a>
+              <div className="flex items-center justify-center space-x-2">
+                <ShoppingCart size={20} />
+                <span>Cart</span>
+                {cartItemCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItemCount > 9 ? '9+' : cartItemCount}
+                  </span>
+                )}
+              </div>
+            </button>
           </div>
         </div>
       </div>
