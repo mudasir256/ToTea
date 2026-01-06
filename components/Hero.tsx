@@ -47,7 +47,20 @@ export default function Hero() {
 
         {/* Main Heading */}
         <h1 className="text-3xl md:text-5xl lg:text-7xl font-extrabold text-white mb-3 md:mb-6 drop-shadow-2xl animate-fade-in animation-delay-400">
-          <span className="text-primary-600">
+          <span 
+            className="text-primary-600 relative inline-block"
+            style={{
+              textShadow: `
+                2px 2px 0px rgba(0,0,0,0.2),
+                4px 4px 0px rgba(0,0,0,0.15),
+                6px 6px 0px rgba(0,0,0,0.1),
+                8px 8px 0px rgba(0,0,0,0.05),
+                0px 0px 20px rgba(0,0,0,0.2),
+                0px 0px 40px rgba(0,0,0,0.1)
+              `,
+              WebkitTextStroke: '1px rgba(0,0,0,0.2)',
+            }}
+          >
             ToTea
           </span>
         </h1>
