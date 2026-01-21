@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { Hero } from '@/components/Hero';
 import { HappyHour } from '@/components/HappyHour';
 import { FeaturedProducts } from '@/components/FeaturedProducts';
+import { Quality } from '@/components/Quality';
 import { OrderOnline } from '@/components/OrderOnline';
 import { ContactSection } from '@/components/ContactSection';
 import { Footer } from '@/components/Footer';
@@ -18,6 +19,7 @@ const Home = () => {
         <Hero />
         <HappyHour />
         <FeaturedProducts />
+        <Quality />
         <OrderOnline hideHeader />
         <ContactSection />
       </main>
