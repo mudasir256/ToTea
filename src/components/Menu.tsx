@@ -105,7 +105,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                           </div>
                           
                           {/* Name Card - Animates from Bottom to Center (Vertical Only) */}
-                          <div className="absolute bottom-4 left-4 right-4 transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:-translate-y-[5.5rem]">
+                          <div className="absolute bottom-4 left-4 right-4 transition-transform duration-700 ease-out group-hover:-translate-y-[5.5rem]">
                             <div className="bg-white/95 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-lg">
                               <div className="flex items-center justify-between gap-2">
                                 <h3 className="font-semibold text-gray-900 text-sm md:text-base leading-tight">
@@ -181,7 +181,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                           
                           {/* Name at Bottom */}
-                          <div className="absolute bottom-2 left-2 right-2 transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:-translate-y-[3rem]">
+                          <div className="absolute bottom-2 left-2 right-2 transition-transform duration-700 ease-out group-hover:-translate-y-[3rem]">
                             <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg">
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-semibold text-gray-900 text-xs leading-tight">
@@ -238,7 +238,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                           
                           {/* Name at Bottom */}
-                          <div className="absolute bottom-2 left-2 right-2 transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:-translate-y-[3rem]">
+                          <div className="absolute bottom-2 left-2 right-2 transition-transform duration-700 ease-out group-hover:-translate-y-[3rem]">
                             <div className="bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg">
                               <span className="font-semibold text-gray-900 text-xs leading-tight">
                                 {topping.name}
