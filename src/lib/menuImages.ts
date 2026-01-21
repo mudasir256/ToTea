@@ -3,7 +3,7 @@ import AvocadoSmoothie from '@/assets/AvocadoSmoothie.jpg';
 import BrownSugarMilk from '@/assets/BrownSugarMilk.jpg';
 import BrownSugarMilkTea from '@/assets/BrownSugarMilkTea.webp';
 import ClassicMilkTea from '@/assets/ClassicMilkTea.jpg';
-import CremeBruleeBrownSugarMilk from '@/assets/CrèmeBrûléeBrownSugarMilk.webp';
+import CremeBruleeBrownSugarMilk from '@/assets/CremeBruleeBrownSugarMilk.webp';
 import EggCream from '@/assets/EggCream.webp';
 import EggVietnameseCoffee from '@/assets/EggVietnameseCoffee.png';
 import GrapefruitTea from '@/assets/GrapefruitTea.webp';
