@@ -2,6 +2,7 @@ import { useLenis } from '@/hooks/useLenis';
 import { Header } from '@/components/Header';
 import { Hero } from '@/components/Hero';
 import { HappyHour } from '@/components/HappyHour';
+import { FeaturedProducts } from '@/components/FeaturedProducts';
 import { OrderOnline } from '@/components/OrderOnline';
 import { ContactSection } from '@/components/ContactSection';
 import { Footer } from '@/components/Footer';
@@ -16,6 +17,7 @@ const Home = () => {
       <main> 
         <Hero />
         <HappyHour />
+        <FeaturedProducts />
         <OrderOnline hideHeader />
         <ContactSection />
       </main>

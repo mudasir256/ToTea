@@ -1,9 +1,10 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ScrollLink } from '@/components/ScrollLink';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Star, Check } from 'lucide-react';
 import { productDetails } from '@/data/productDetails';
 import { getMenuImage } from '@/lib/menuImages';
-import { NotFound } from '@/pages/NotFound';
+import NotFound from '@/pages/NotFound';
 
 export const ProductDetail = () => {
   const { productName } = useParams<{ productName: string }>();
@@ -167,12 +168,12 @@ export const ProductDetail = () => {
               </div>
 
               {/* CTA Button */}
-              <Link
+              <ScrollLink
                 to="/order"
                 className="btn-accent w-full text-center mt-auto"
               >
                 Order Now
-              </Link>
+              </ScrollLink>
             </motion.div>
           </div>
         </div>

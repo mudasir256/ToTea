@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Clock, MessageCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ScrollLink } from '@/components/ScrollLink';
 
 export const ContactSection = () => {
   const contactInfo = [
@@ -94,13 +94,13 @@ export const ContactSection = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-center"
           >
-            <Link
+            <ScrollLink
               to="/contact"
               className="btn-accent inline-flex items-center gap-2"
             >
               <MessageCircle size={18} />
               <span>Send us a Message</span>
-            </Link>
+            </ScrollLink>
           </motion.div>
         </div>
       </div>

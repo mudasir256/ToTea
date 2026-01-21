@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { MapPin, Phone, Clock, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ScrollLink } from '@/components/ScrollLink';
 import { locations } from '@/data/menu';
 
 interface LocationsProps {
@@ -76,13 +76,13 @@ export const Locations = ({ hideHeader = false }: LocationsProps) => {
                 </div>
 
                 {/* Order Button */}
-                <Link
+                <ScrollLink
                   to="/order"
                   className="inline-flex items-center gap-2 text-accent font-medium hover:gap-3 transition-all"
                 >
                   Order Online
                   <ExternalLink size={16} />
-                </Link>
+                </ScrollLink>
               </motion.div>
             ))}
           </div>

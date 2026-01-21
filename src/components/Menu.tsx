@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ScrollLink } from '@/components/ScrollLink';
 import { menuCategories, toppings } from '@/data/menu';
 import { getMenuImage, getToppingImage } from '@/lib/menuImages';
 
@@ -75,7 +75,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                       const productUrl = `/product/${encodeURIComponent(item.name)}`;
                       
                       return (
-                        <Link to={productUrl}>
+                        <ScrollLink to={productUrl}>
                           <motion.div
                             key={item.name}
                             initial={{ opacity: 0, y: 30 }}
@@ -121,7 +121,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                             </div>
                           </div>
                         </motion.div>
-                        </Link>
+                        </ScrollLink>
                       );
                     })}
                   </div>

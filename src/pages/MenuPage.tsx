@@ -16,7 +16,7 @@ const MenuPage = () => {
         <PageHeader
           badge="Delicious Selection"
           title="Our Menu"
-          subtitle="Taste The Crunch - SAR 20-40 per person"
+          subtitle="Taste The Crunch - $20-40 per person"
         />
         <Menu hideHeader />
         <OrderOnline hideHeader />

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ScrollLink } from '@/components/ScrollLink';
 import heroImage from '@/assets/hero-bubble-tea.jpg';
 
 export const Hero = () => {
@@ -74,12 +74,12 @@ export const Hero = () => {
               transition={{ duration: 0.8, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4"
             >
-              <Link to="/menu" className="btn-primary w-full sm:w-auto">
+              <ScrollLink to="/menu" className="btn-primary w-full sm:w-auto">
                 View Menu
-              </Link>
-              <Link to="/order" className="btn-outline w-full sm:w-auto">
+              </ScrollLink>
+              <ScrollLink to="/order" className="btn-outline w-full sm:w-auto">
                 Order Now
-              </Link>
+              </ScrollLink>
             </motion.div>
 
             {/* Stats */}

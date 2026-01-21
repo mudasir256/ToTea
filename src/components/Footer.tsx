@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ScrollLink } from '@/components/ScrollLink';
 import logo from '@/assets/logo.png';
 
 const quickLinks = [
@@ -40,7 +40,7 @@ export const Footer = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
             >
-              <Link to="/" className="flex items-center gap-3 mb-6">
+              <ScrollLink to="/" className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl overflow-hidden">
                   <img 
                     src={logo} 
@@ -54,7 +54,7 @@ export const Footer = () => {
                     Bubble Tea & More
                   </p>
                 </div>
-              </Link>
+              </ScrollLink>
               <p className="text-sm text-primary-foreground/70 leading-relaxed mb-6">
                 Premium Bubble Tea & Coffee in Northern Virginia. Crafted with passion,
                 served with love.
@@ -85,12 +85,12 @@ export const Footer = () => {
               <ul className="space-y-3">
                 {quickLinks.map((link) => (
                   <li key={link.label}>
-                    <Link
+                    <ScrollLink
                       to={link.href}
                       className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
                     >
                       {link.label}
-                    </Link>
+                    </ScrollLink>
                   </li>
                 ))}
               </ul>

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Clock, Sparkles } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ScrollLink } from '@/components/ScrollLink';
 
 const includedItems = ['Specialteas', 'Milk Teas', 'Cold Brews', 'Vietnamese Coffee'];
 
@@ -35,17 +35,51 @@ export const HappyHour = () => {
               </p>
 
               {/* Time Badge */}
-              <div className="inline-flex items-center gap-3 px-6 py-4 rounded-2xl bg-primary-foreground/10 mb-8">
-                <Clock size={24} className="text-accent" />
-                <div>
-                  <div className="text-xl font-bold">9:00 PM - 1:00 AM</div>
-                  <div className="text-sm text-primary-foreground/60">Daily</div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="inline-flex items-center gap-4 px-6 py-5 rounded-2xl bg-primary-foreground/10 border border-primary-foreground/20 backdrop-blur-sm mb-8 group hover:bg-primary-foreground/15 transition-all duration-300"
+              >
+                <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center group-hover:bg-accent/30 transition-colors">
+                  <Clock size={26} className="text-accent" />
                 </div>
-              </div>
+                <div>
+                  <div className="text-2xl font-bold text-primary-foreground">9:00 PM - 1:00 AM</div>
+                  <div className="text-sm text-primary-foreground/70 font-medium mt-0.5">Every Night</div>
+                </div>
+              </motion.div>
 
-              <Link to="/order" className="btn-accent inline-block">
-                Order Now
-              </Link>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                <ScrollLink 
+                  to="/order" 
+                  className="btn-accent inline-flex items-center gap-2 group"
+                >
+                  <span>Order Now</span>
+                  <motion.svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    initial={{ x: 0 }}
+                    whileHover={{ x: 5 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 8l4 4m0 0l-4 4m4-4H3"
+                    />
+                  </motion.svg>
+                </ScrollLink>
+              </motion.div>
             </motion.div>
 
             {/* Included Items */}

@@ -11,11 +11,11 @@ interface NavLinkCompatProps extends Omit<NavLinkProps, "className"> {
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
   ({ className, activeClassName, pendingClassName, to, onClick, ...props }, ref) => {
     const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-      // Scroll to top on navigation
+      // Scroll to top on navigation (instant)
       window.scrollTo({
         top: 0,
         left: 0,
-        behavior: 'smooth',
+        behavior: 'auto',
       });
       
       // Call original onClick if provided
