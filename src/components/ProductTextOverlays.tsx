@@ -1,5 +1,6 @@
 import { useScroll, useTransform, motion } from 'framer-motion';
 import { Product } from '@/data/products';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ProductTextOverlaysProps {
   product: Product;
@@ -7,58 +8,33 @@ interface ProductTextOverlaysProps {
 }
 
 export const ProductTextOverlays = ({ product, containerRef }: ProductTextOverlaysProps) => {
+  const isMobile = useIsMobile();
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ['start start', 'end end']
   });
 
-  // Section 1: Visible immediately, fade out at 0.2-0.3
-  const section1Opacity = useTransform(
-    scrollYProgress,
-    [0, 0.1, 0.2, 0.3],
-    [1, 1, 1, 0]
-  );
-  const section1Y = useTransform(
-    scrollYProgress,
-    [0, 0.1, 0.2, 0.3],
-    [0, 0, 0, -30]
-  );
+  // Mobile: wider progress ranges so each section stays visible longer and transitions feel smoother
+  const s1 = isMobile ? [0, 0.12, 0.28, 0.38] : [0, 0.1, 0.2, 0.3];
+  const s2 = isMobile ? [0.3, 0.42, 0.52, 0.62] : [0.25, 0.35, 0.45, 0.55];
+  const s3 = isMobile ? [0.55, 0.68, 0.78, 0.88] : [0.5, 0.6, 0.7, 0.8];
+  const s4 = isMobile ? [0.82, 0.92, 1] : [0.75, 0.85, 1];
 
-  // Section 2: Fade in at 0.25-0.4, fade out at 0.4-0.5
-  const section2Opacity = useTransform(
-    scrollYProgress,
-    [0.25, 0.35, 0.45, 0.55],
-    [0, 1, 1, 0]
-  );
-  const section2Y = useTransform(
-    scrollYProgress,
-    [0.25, 0.35, 0.45, 0.55],
-    [30, 0, 0, -30]
-  );
+  // Section 1: Visible immediately, fade out
+  const section1Opacity = useTransform(scrollYProgress, s1, [1, 1, 1, 0]);
+  const section1Y = useTransform(scrollYProgress, s1, [0, 0, 0, -24]);
 
-  // Section 3: Fade in at 0.5-0.65, fade out at 0.65-0.75
-  const section3Opacity = useTransform(
-    scrollYProgress,
-    [0.5, 0.6, 0.7, 0.8],
-    [0, 1, 1, 0]
-  );
-  const section3Y = useTransform(
-    scrollYProgress,
-    [0.5, 0.6, 0.7, 0.8],
-    [30, 0, 0, -30]
-  );
+  // Section 2
+  const section2Opacity = useTransform(scrollYProgress, s2, [0, 1, 1, 0]);
+  const section2Y = useTransform(scrollYProgress, s2, [24, 0, 0, -24]);
 
-  // Section 4: Fade in at 0.75-0.9, stay visible
-  const section4Opacity = useTransform(
-    scrollYProgress,
-    [0.75, 0.85, 1],
-    [0, 1, 1]
-  );
-  const section4Y = useTransform(
-    scrollYProgress,
-    [0.75, 0.85, 1],
-    [30, 0, 0]
-  );
+  // Section 3
+  const section3Opacity = useTransform(scrollYProgress, s3, [0, 1, 1, 0]);
+  const section3Y = useTransform(scrollYProgress, s3, [24, 0, 0, -24]);
+
+  // Section 4: Fade in, stay visible
+  const section4Opacity = useTransform(scrollYProgress, s4, [0, 1, 1]);
+  const section4Y = useTransform(scrollYProgress, s4, [24, 0, 0]);
 
   return (
     <div className="fixed inset-0 pointer-events-none z-10">
