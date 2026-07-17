@@ -1,0 +1,31 @@
+project_id = "mfjqjhvhqzcnmrvycdxc"
+
+[auth]
+site_url = "http://localhost:8080"
+minimum_password_length = 8
+additional_redirect_urls = [
+  "http://localhost:8080/auth/callback",
+  "http://localhost:8080/reset-password",
+  "http://127.0.0.1:8080/auth/callback",
+  "http://127.0.0.1:8080/reset-password"
+]
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[auth.external.google]
+enabled = true
+client_id = "947125692241-1t8odql7kptodkenugiv7qrqov9jc7r1.apps.googleusercontent.com"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+skip_nonce_check = false
+
+[functions.create-checkout]
+verify_jwt = true
+
+[functions.finalize-pos-checkout]
+verify_jwt = true
+
+[functions.square-webhook]
+verify_jwt = false

@@ -3,22 +3,32 @@ import { Lightbulb } from 'lucide-react';
 
 const orderPlatforms = [
   {
+    name: 'Order on Totea',
+    description: 'Shop the menu, checkout securely with Square',
+    color: 'bg-amber-600',
+    icon: '🧋',
+    href: '/cart',
+  },
+  {
     name: 'Toast Pick-Up',
     description: 'Order ahead for quick pick-up',
     color: 'bg-orange-500',
     icon: '🍞',
+    href: import.meta.env.VITE_ORDER_TOAST_URL || '#',
   },
   {
     name: 'Uber Eats',
     description: 'Delivery or pick-up available',
     color: 'bg-green-600',
     icon: '🚗',
+    href: import.meta.env.VITE_ORDER_UBER_URL || '#',
   },
   {
     name: 'DoorDash',
     description: 'Fast delivery to your door',
     color: 'bg-red-500',
     icon: '🚀',
+    href: import.meta.env.VITE_ORDER_DOORDASH_URL || '#',
   },
 ];
 
@@ -53,11 +63,11 @@ export const OrderOnline = ({ hideHeader = false }: OrderOnlineProps) => {
           )}
 
           {/* Order Platforms */}
-          <div className="grid md:grid-cols-3 gap-6 mb-10">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             {orderPlatforms.map((platform, index) => (
               <motion.a
                 key={platform.name}
-                href="#"
+                href={platform.href}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}

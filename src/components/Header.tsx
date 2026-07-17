@@ -1,27 +1,31 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Menu as MenuIcon, X } from 'lucide-react';
-import { NavLink } from './NavLink';
-import logo from '@/assets/logo.png';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu as MenuIcon, ShoppingCart, User, X } from "lucide-react";
+import { NavLink } from "./NavLink";
+import logo from "@/assets/logo.png";
+import { useCart } from "@/features/cart/CartProvider";
+import { useAuth } from "@/features/auth/AuthProvider";
 
 const navLinks = [
-  { label: 'Home', href: '/' },
-  { label: 'Menu', href: '/menu' },
-  { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/contact' },
+  { label: "Home", href: "/" },
+  { label: "Menu", href: "/menu" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { itemCount } = useCart();
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
@@ -29,23 +33,18 @@ export const Header = () => {
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled
-            ? 'glass py-3 shadow-lg border-b border-border/50'
-            : 'py-6 bg-transparent'
+            ? "glass py-3 shadow-lg border-b border-border/50"
+            : "py-6 bg-transparent"
         }`}
       >
         <div className="container mx-auto px-6 md:px-12 lg:px-20 flex items-center justify-between">
-          {/* Logo */}
           <NavLink to="/" className="flex items-center gap-3 group">
             <div className="relative">
               <div className="w-12 h-12 rounded-2xl overflow-hidden transition-transform duration-300 group-hover:scale-110">
-                <img 
-                  src={logo} 
-                  alt="Totea Logo" 
-                  className="w-full h-full object-cover"
-                />
+                <img src={logo} alt="Totea Logo" className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-accent animate-pulse" />
             </div>
@@ -59,7 +58,6 @@ export const Header = () => {
             </div>
           </NavLink>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-10">
             {navLinks.map((link) => (
               <NavLink
@@ -74,19 +72,29 @@ export const Header = () => {
             ))}
           </nav>
 
-          {/* CTA Button */}
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-3">
             <NavLink
-              to="/order"
-              className="btn-accent inline-flex items-center gap-2 !px-6 !py-3"
+              to="/cart"
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+              aria-label={`Cart with ${itemCount} items`}
             >
+              <ShoppingCart size={18} />
+              {itemCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+                  {itemCount > 99 ? "99+" : itemCount}
+                </span>
+              ) : null}
+            </NavLink>
+            <NavLink
+              to={user ? "/account/profile" : "/login"}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+              aria-label={user ? "Account" : "Sign in"}
+            >
+              <User size={18} />
+            </NavLink>
+            <NavLink to="/order" className="btn-accent inline-flex items-center gap-2 !px-6 !py-3">
               <span>Order Now</span>
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -97,17 +105,30 @@ export const Header = () => {
             </NavLink>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-secondary text-foreground"
-          >
-            {isMobileMenuOpen ? <X size={20} /> : <MenuIcon size={20} />}
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <NavLink
+              to="/cart"
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground"
+              aria-label={`Cart with ${itemCount} items`}
+            >
+              <ShoppingCart size={18} />
+              {itemCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+                  {itemCount > 99 ? "99+" : itemCount}
+                </span>
+              ) : null}
+            </NavLink>
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary text-foreground"
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <MenuIcon size={20} />}
+            </button>
+          </div>
         </div>
       </motion.header>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
@@ -128,6 +149,13 @@ export const Header = () => {
                     {link.label}
                   </NavLink>
                 ))}
+                <NavLink
+                  to={user ? "/account/profile" : "/login"}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="font-medium text-lg text-foreground py-3 px-4 rounded-xl hover:bg-secondary transition-colors"
+                >
+                  {user ? "Account" : "Sign in"}
+                </NavLink>
                 <NavLink
                   to="/order"
                   onClick={() => setIsMobileMenuOpen(false)}
