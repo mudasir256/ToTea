@@ -66,9 +66,12 @@ function loadSquareSdk(environment: string): Promise<void> {
   });
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export default function CheckoutPage() {
   const { user, profile, refreshProfile } = useAuth();
-  const { items, subtotalCents, shippingCents, discountCents, taxCents, totalCents, refreshCart } =
+  const { items, subtotalCents, shippingCents, discountCents, taxCents, totalCents, clearCart } =
     useCart();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
@@ -181,6 +184,19 @@ export default function CheckoutPage() {
       return;
     }
 
+    const checkoutItems = items.map((item) => ({
+      menuItemId: item.product_id,
+      quantity: item.quantity,
+      size: item.selected_options.size,
+    }));
+
+    if (checkoutItems.some((item) => !UUID_PATTERN.test(item.menuItemId))) {
+      setFormError(
+        "One or more cart items came from the old menu. Remove them and add them again."
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       const nameParts = values.full_name.trim().split(/\s+/);
@@ -223,6 +239,7 @@ export default function CheckoutPage() {
           customerName: values.full_name,
           customerEmail: profile?.email || user?.email,
           contactNumber: contact,
+          items: checkoutItems,
           shippingAddress: {
             address_line_1: values.address_line_1,
             address_line_2: values.address_line_2 || "",
@@ -235,15 +252,28 @@ export default function CheckoutPage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        let message = error.message;
+        const response = (error as { context?: Response }).context;
+        if (response) {
+          try {
+            const payload = (await response.clone().json()) as { error?: string };
+            if (payload.error) message = payload.error;
+          } catch {
+            // Keep the Supabase client error when the response is not JSON.
+          }
+        }
+        throw new Error(message);
+      }
       if (data?.error) throw new Error(data.error);
-      if (!data?.orderId) throw new Error("Checkout did not return an order id");
+      const orderId = data?.orderId ?? data?.order?.id;
+      if (!orderId) throw new Error("Checkout did not return an order id");
 
       clearCheckoutIdempotencyKey();
       await refreshProfile();
-      await refreshCart();
+      await clearCart();
       toast.success("Order placed successfully");
-      navigate(`/order-confirmation/${data.orderId}`);
+      navigate(`/order-confirmation/${orderId}`);
     } catch (error) {
       // Allow a fresh Square payment attempt after any failure (do not reuse a failed idempotency key).
       clearCheckoutIdempotencyKey();

@@ -12,6 +12,10 @@ import { ErrorAlert } from "@/components/shared/ErrorAlert";
 import { Button } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/shared/OrderStatusBadge";
 
+function formatOrderMoney(amount: number) {
+  return formatMoney(Math.round(Number(amount) * 100));
+}
+
 export default function OrderConfirmationPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { user } = useAuth();
@@ -66,7 +70,7 @@ export default function OrderConfirmationPage() {
                   <OrderStatusBadge status={order.order_status} />
                 </div>
                 <p>{formatDateTime(order.created_at).full}</p>
-                <p className="font-semibold text-lg">{formatMoney(order.total_amount_cents)}</p>
+                <p className="text-lg font-semibold">{formatOrderMoney(order.total)}</p>
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <Button asChild className="btn-accent">

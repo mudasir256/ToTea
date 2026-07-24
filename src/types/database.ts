@@ -10,18 +10,12 @@ export type OrderStatus =
   | "pending"
   | "confirmed"
   | "processing"
-  | "shipped"
-  | "delivered"
+  | "ready"
+  | "completed"
   | "cancelled"
   | "refunded";
 
-export type PaymentStatus =
-  | "pending"
-  | "authorized"
-  | "paid"
-  | "failed"
-  | "refunded"
-  | "cancelled";
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "cancelled";
 
 export type PaymentMethod = "square_card";
 
@@ -34,9 +28,14 @@ export type ShippingAddress = {
   country: string;
 };
 
+export type CustomerDetails = {
+  name: string;
+  email: string;
+  contact_number: string;
+};
+
 export type Profile = {
   id: string;
-  auth_user_id: string;
   full_name: string;
   email: string;
   profile_image_url: string | null;
@@ -46,133 +45,110 @@ export type Profile = {
   city: string | null;
   state: string | null;
   postal_code: string | null;
-  country: string | null;
+  country: string;
+  role: "admin" | "customer";
   created_at: string;
   updated_at: string;
 };
 
-export type Product = {
+export type MenuCategory = {
   id: string;
-  slug: string;
   name: string;
-  category: string;
+  slug: string;
   description: string;
-  ingredients: string[];
-  allergens: string[];
-  calories: string | null;
-  image_url: string | null;
-  is_hero: boolean;
-  is_active: boolean;
   sort_order: number;
-};
-
-export type ProductVariant = {
-  id: string;
-  product_id: string;
-  size_label: string;
-  sku: string;
-  unit_price_cents: number;
-  stock_quantity: number;
   is_active: boolean;
-};
-
-export type ProductWithVariants = Product & {
-  product_variants: ProductVariant[];
-};
-
-export type Cart = {
-  id: string;
-  user_id: string;
   created_at: string;
   updated_at: string;
 };
 
-export type CartItem = {
+export type MenuItem = {
   id: string;
-  cart_id: string;
-  product_id: string;
-  product_variant_id: string;
-  product_name: string;
-  product_image: string | null;
-  selected_options: { size?: string; [key: string]: unknown };
+  category_id: string;
+  name: string;
+  slug: string;
+  description: string;
+  image_url: string;
+  price: number;
+  sizes: string;
+  ingredients: string;
+  calories: string;
+  allergens: string;
+  is_available: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MenuTopping = {
+  id: string;
+  name: string;
+  category: "standard" | "cream";
+  image_url: string;
+  price: number;
+  is_available: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderItemSnapshot = {
+  menu_item_id: string;
+  name: string;
+  image_url: string;
+  size: string;
   quantity: number;
-  unit_price_cents: number;
-  created_at: string;
-  updated_at: string;
-  stock_quantity?: number;
+  unit_price: number;
+  line_total: number;
 };
 
 export type Order = {
   id: string;
   order_number: string;
-  user_id: string;
-  customer_name: string;
-  customer_email: string;
-  contact_number: string;
+  user_id: string | null;
+  customer_details: CustomerDetails;
+  items: OrderItemSnapshot[];
   shipping_address: ShippingAddress;
-  subtotal_cents: number;
-  discount_amount_cents: number;
-  tax_amount_cents: number;
-  shipping_amount_cents: number;
-  total_amount_cents: number;
-  currency: string;
+  total: number;
   order_status: OrderStatus;
-  payment_method: PaymentMethod;
   payment_status: PaymentStatus;
+  payment_method: PaymentMethod;
   square_order_id: string | null;
   square_payment_id: string | null;
-  tracking_number: string | null;
-  estimated_delivery_at: string | null;
-  item_count: number;
+  idempotency_key: string;
   created_at: string;
   updated_at: string;
 };
 
-export type OrderItem = {
-  id: string;
-  order_id: string;
-  product_id: string | null;
-  product_variant_id: string | null;
-  product_name: string;
-  product_image: string | null;
-  selected_options: { size?: string; [key: string]: unknown };
-  quantity: number;
-  unit_price_cents: number;
-  line_total_cents: number;
-};
-
-export type OrderStatusHistory = {
-  id: string;
-  order_id: string;
-  status: OrderStatus;
-  note: string | null;
-  updated_by: string;
-  created_at: string;
-};
-
-export type OrderWithDetails = Order & {
-  order_items: OrderItem[];
-  order_status_history: OrderStatusHistory[];
+export type MenuStockAvailability = {
+  menu_item_id: string;
+  size: string;
+  available_quantity: number;
 };
 
 export type Database = {
   public: {
     Tables: {
       profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile> };
-      products: { Row: Product; Insert: Partial<Product>; Update: Partial<Product> };
-      product_variants: {
-        Row: ProductVariant;
-        Insert: Partial<ProductVariant>;
-        Update: Partial<ProductVariant>;
+      menu_categories: {
+        Row: MenuCategory;
+        Insert: Partial<MenuCategory>;
+        Update: Partial<MenuCategory>;
       };
-      carts: { Row: Cart; Insert: Partial<Cart>; Update: Partial<Cart> };
-      cart_items: { Row: CartItem; Insert: Partial<CartItem>; Update: Partial<CartItem> };
+      menu_items: { Row: MenuItem; Insert: Partial<MenuItem>; Update: Partial<MenuItem> };
+      menu_toppings: {
+        Row: MenuTopping;
+        Insert: Partial<MenuTopping>;
+        Update: Partial<MenuTopping>;
+      };
       orders: { Row: Order; Insert: Partial<Order>; Update: Partial<Order> };
-      order_items: { Row: OrderItem; Insert: Partial<OrderItem>; Update: Partial<OrderItem> };
-      order_status_history: {
-        Row: OrderStatusHistory;
-        Insert: Partial<OrderStatusHistory>;
-        Update: Partial<OrderStatusHistory>;
+    };
+    Functions: {
+      get_public_menu_stock: {
+        Args: {
+          p_menu_item_id?: string | null;
+        };
+        Returns: MenuStockAvailability[];
       };
     };
   };

@@ -1,13 +1,12 @@
-import { useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Loader2, ShoppingCart, Star } from "lucide-react";
-import { productDetails } from "@/data/productDetails";
-import { getCatalogProductByName } from "@/data/catalog";
-import { getMenuImage } from "@/lib/menuImages";
+import { ArrowLeft, Check, Loader2, ShoppingCart } from "lucide-react";
 import { formatMoney } from "@/lib/money";
-import { useCart, resolveLocalVariant } from "@/features/cart/CartProvider";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { availableQuantity, fetchMenuStock } from "@/lib/menuStock";
+import { useCart } from "@/features/cart/CartProvider";
+import { getSupabase } from "@/lib/supabase";
+import type { MenuItem, MenuStockAvailability } from "@/types/database";
 import NotFound from "@/pages/NotFound";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -16,75 +15,171 @@ export const ProductDetail = () => {
   const { productName } = useParams<{ productName: string }>();
   const navigate = useNavigate();
   const { addItem } = useCart();
-  const [selectedSize, setSelectedSize] = useState<string>("Regular");
+  const [item, setItem] = useState<MenuItem | null>(null);
+  const [stock, setStock] = useState<MenuStockAvailability[]>([]);
+  const [categoryName, setCategoryName] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-
+  const [notFound, setNotFound] = useState(false);
   const decodedName = productName ? decodeURIComponent(productName) : "";
-  const product = decodedName ? productDetails[decodedName] : undefined;
-  const catalog = product ? getCatalogProductByName(product.name) : undefined;
-  const sizes = product?.size?.length ? product.size : ["Regular", "Large"];
-  const imageSrc = product ? getMenuImage(product.name) : undefined;
 
-  const priceLabel = useMemo(() => {
-    if (!product) return undefined;
-    if (!catalog) return product.price;
-    const variant = catalog.variants.find((v) => v.sizeLabel === selectedSize) || catalog.variants[0];
-    if (variant) return formatMoney(variant.unitPriceCents);
-    const low = catalog.variants[0]?.unitPriceCents ?? 0;
-    const high = catalog.variants[catalog.variants.length - 1]?.unitPriceCents ?? low;
-    return `${formatMoney(low)} – ${formatMoney(high)}`;
-  }, [catalog, product, selectedSize]);
+  useEffect(() => {
+    let cancelled = false;
 
-  if (!productName || !product) {
-    return <NotFound />;
-  }
-
-  const handleAddToCart = async () => {
-    setAdding(true);
-    try {
-      if (isSupabaseConfigured) {
-        const supabase = getSupabase();
-        if (supabase) {
-          const { data: dbProduct } = await supabase
-            .from("products")
-            .select("id, name, image_url, product_variants(id, size_label, unit_price_cents, stock_quantity, is_active)")
-            .eq("name", product.name)
-            .maybeSingle();
-
-          const variants = (dbProduct?.product_variants || []) as Array<{
-            id: string;
-            size_label: string;
-            unit_price_cents: number;
-            stock_quantity: number;
-            is_active: boolean;
-          }>;
-          const variant = variants.find((v) => v.size_label === selectedSize && v.is_active);
-          if (dbProduct && variant) {
-            if (variant.stock_quantity < 1) {
-              toast.error("This size is out of stock");
-              return;
-            }
-            await addItem({
-              product_id: dbProduct.id as string,
-              product_variant_id: variant.id,
-              product_name: dbProduct.name as string,
-              product_image: (dbProduct.image_url as string | null) || imageSrc || null,
-              selected_options: { size: selectedSize },
-              unit_price_cents: variant.unit_price_cents,
-              stock_quantity: variant.stock_quantity,
-              quantity: 1,
-            });
-            return;
-          }
-        }
-      }
-
-      const local = resolveLocalVariant(product.name, selectedSize);
-      if (!local) {
-        toast.error("Unable to add this product variant");
+    async function loadItem() {
+      if (!decodedName) {
+        setNotFound(true);
+        setLoading(false);
         return;
       }
-      await addItem({ ...local, quantity: 1 });
+      const supabase = getSupabase();
+      if (!supabase) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("menu_items")
+        .select("*")
+        .eq("name", decodedName)
+        .eq("is_available", true)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (error || !data) {
+        if (error) console.error("Unable to load menu item", error);
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      const menuItem = data as MenuItem;
+      const { data: category } = await supabase
+        .from("menu_categories")
+        .select("name")
+        .eq("id", menuItem.category_id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      let currentStock: MenuStockAvailability[] = [];
+      try {
+        currentStock = await fetchMenuStock(supabase, menuItem.id);
+      } catch (stockError) {
+        console.error("Unable to load live menu stock", stockError);
+      }
+
+      if (cancelled) return;
+      const sizes = menuItem.sizes
+        .split(",")
+        .map((size) => size.trim())
+        .filter(Boolean);
+      const firstAvailableSize =
+        sizes.find(
+          (size) => availableQuantity(currentStock, menuItem.id, size) > 0,
+        ) ?? "";
+
+      setItem(menuItem);
+      setStock(currentStock);
+      setCategoryName((category as { name?: string } | null)?.name ?? "ToTea menu");
+      setSelectedSize(firstAvailableSize);
+      setLoading(false);
+    }
+
+    void loadItem();
+    return () => {
+      cancelled = true;
+    };
+  }, [decodedName]);
+
+  const sizes = useMemo(
+    () =>
+      item?.sizes
+        .split(",")
+        .map((size) => size.trim())
+        .filter(Boolean) ?? [],
+    [item],
+  );
+  const ingredients = useMemo(
+    () =>
+      item?.ingredients
+        .split(",")
+        .map((ingredient) => ingredient.trim())
+        .filter(Boolean) ?? [],
+    [item],
+  );
+
+  if (loading) {
+    return (
+      <section className="section-padding flex min-h-[70vh] items-center justify-center pt-24">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>Loading item...</span>
+        </div>
+      </section>
+    );
+  }
+
+  if (notFound || !item) return <NotFound />;
+
+  const selectedQuantity = selectedSize
+    ? availableQuantity(stock, item.id, selectedSize)
+    : 0;
+  const hasAvailableSize = sizes.some(
+    (size) => availableQuantity(stock, item.id, size) > 0,
+  );
+
+  const handleAddToCart = async () => {
+    if (!selectedSize) {
+      toast.error("This item is currently unavailable.");
+      return;
+    }
+
+    const supabase = getSupabase();
+    if (!supabase) {
+      toast.error("We could not confirm live stock. Please try again.");
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const currentStock = await fetchMenuStock(supabase, item.id);
+      setStock(currentStock);
+      const currentQuantity = availableQuantity(
+        currentStock,
+        item.id,
+        selectedSize,
+      );
+
+      if (currentQuantity < 1) {
+        const nextAvailableSize =
+          sizes.find(
+            (size) => availableQuantity(currentStock, item.id, size) > 0,
+          ) ?? "";
+        setSelectedSize(nextAvailableSize);
+        toast.error(
+          nextAvailableSize
+            ? `${selectedSize} is no longer available. Choose another size.`
+            : "This item is currently unavailable.",
+        );
+        return;
+      }
+
+      const priceCents = Math.round(Number(item.price) * 100);
+      await addItem({
+        product_id: item.id,
+        product_variant_id: `${item.id}:${selectedSize.toLowerCase()}`,
+        product_name: item.name,
+        product_image: item.image_url,
+        selected_options: { size: selectedSize },
+        unit_price_cents: priceCents,
+        stock_quantity: currentQuantity,
+        quantity: 1,
+      });
+    } catch (stockError) {
+      console.error("Unable to confirm live menu stock", stockError);
+      toast.error("We could not confirm live stock. Please try again.");
     } finally {
       setAdding(false);
     }
@@ -93,7 +188,7 @@ export const ProductDetail = () => {
   return (
     <section className="section-padding pt-24 md:pt-32">
       <div className="container mx-auto px-6 md:px-12 lg:px-20">
-        <div className="max-w-5xl mx-auto">
+        <div className="mx-auto max-w-5xl">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -101,41 +196,35 @@ export const ProductDetail = () => {
             className="mb-8"
           >
             <button
+              type="button"
               onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft size={18} />
               <span>Back to Menu</span>
             </button>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
               className="relative"
             >
-              <div className="relative rounded-4xl overflow-hidden shadow-elevated aspect-square">
-                {imageSrc ? (
-                  <img
-                    src={imageSrc}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                    <span className="text-6xl">🧋</span>
-                  </div>
-                )}
-                {product.isHero && (
-                  <div className="absolute top-4 right-4">
-                    <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/20 backdrop-blur-sm border border-accent/30">
-                      <Star size={14} fill="currentColor" className="text-accent" />
-                      <span className="text-sm font-semibold text-accent">Hero Item</span>
-                    </div>
-                  </div>
-                )}
+              <div className="relative aspect-square overflow-hidden rounded-4xl shadow-elevated">
+                <img
+                  src={item.image_url}
+                  alt={item.name}
+                  className={`h-full w-full object-cover ${
+                    hasAvailableSize ? "" : "saturate-[0.7]"
+                  }`}
+                />
+                {!hasAvailableSize ? (
+                  <span className="absolute left-5 top-5 rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-700 shadow-lg">
+                    Unavailable
+                  </span>
+                ) : null}
               </div>
             </motion.div>
 
@@ -146,80 +235,97 @@ export const ProductDetail = () => {
               className="flex flex-col"
             >
               <div className="mb-4">
-                <span className="inline-block px-4 py-2 rounded-full bg-secondary border border-border/50 text-sm font-medium text-muted-foreground">
-                  {product.category}
+                <span className="inline-block rounded-full border border-border/50 bg-secondary px-4 py-2 text-sm font-medium text-muted-foreground">
+                  {categoryName}
                 </span>
               </div>
 
-              <h1 className="heading-lg mb-4 text-foreground">{product.name}</h1>
-              <p className="body-lg text-muted-foreground mb-8 leading-relaxed">{product.description}</p>
+              <h1 className="heading-lg mb-4 text-foreground">{item.name}</h1>
+              <p className="body-lg mb-8 leading-relaxed text-muted-foreground">
+                {item.description}
+              </p>
 
-              <div className="grid sm:grid-cols-2 gap-6 mb-8">
-                <div className="p-6 rounded-3xl bg-secondary border border-border">
-                  <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">Price</h3>
-                  <p className="text-2xl font-bold text-foreground">{priceLabel}</p>
+              <div className="mb-8 grid gap-6 sm:grid-cols-2">
+                <div className="rounded-3xl border border-border bg-secondary p-6">
+                  <h3 className="mb-2 text-sm uppercase tracking-wider text-muted-foreground">
+                    Price
+                  </h3>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatMoney(Math.round(Number(item.price) * 100))}
+                  </p>
                 </div>
-                <div className="p-6 rounded-3xl bg-secondary border border-border">
-                  <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">
+                <div className="rounded-3xl border border-border bg-secondary p-6">
+                  <h3 className="mb-2 text-sm uppercase tracking-wider text-muted-foreground">
                     Choose size
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {sizes.map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => setSelectedSize(size)}
-                        className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
-                          selectedSize === size
-                            ? "bg-accent text-accent-foreground border-accent"
-                            : "bg-background border-border"
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
+                    {sizes.map((size) => {
+                      const quantity = availableQuantity(stock, item.id, size);
+                      const isAvailable = quantity > 0;
+
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          disabled={!isAvailable}
+                          onClick={() => setSelectedSize(size)}
+                          className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+                            selectedSize === size
+                              ? "border-accent bg-accent text-accent-foreground"
+                              : isAvailable
+                                ? "border-border bg-background hover:border-accent/50"
+                                : "cursor-not-allowed border-border/60 bg-muted/60 text-muted-foreground line-through opacity-70"
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
+              {!hasAvailableSize ? (
+                <div className="mb-8 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+                  This item is temporarily unavailable because one or more ingredients
+                  are out of stock.
+                </div>
+              ) : null}
+
               <div className="mb-8">
-                <h3 className="text-xl font-semibold mb-4">Ingredients</h3>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {product.ingredients.map((ingredient, index) => (
+                <h3 className="mb-4 text-xl font-semibold">Ingredients</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {ingredients.map((ingredient, index) => (
                     <motion.div
                       key={ingredient}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: 0.4 + index * 0.05 }}
+                      transition={{ duration: 0.3, delay: 0.35 + index * 0.04 }}
                       className="flex items-center gap-2 text-muted-foreground"
                     >
-                      <Check size={16} className="text-accent flex-shrink-0" />
+                      <Check size={16} className="shrink-0 text-accent" />
                       <span>{ingredient}</span>
                     </motion.div>
                   ))}
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4 mb-8">
-                {product.calories && (
-                  <div className="p-4 rounded-2xl bg-card border border-border">
-                    <p className="text-sm text-muted-foreground mb-1">Calories</p>
-                    <p className="font-semibold">{product.calories}</p>
-                  </div>
-                )}
-                {product.allergens && product.allergens.length > 0 && (
-                  <div className="p-4 rounded-2xl bg-card border border-border">
-                    <p className="text-sm text-muted-foreground mb-1">Allergens</p>
-                    <p className="font-semibold text-sm">{product.allergens.join(", ")}</p>
-                  </div>
-                )}
+              <div className="mb-8 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <p className="mb-1 text-sm text-muted-foreground">Calories</p>
+                  <p className="font-semibold">{item.calories}</p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <p className="mb-1 text-sm text-muted-foreground">Allergens</p>
+                  <p className="text-sm font-semibold">{item.allergens}</p>
+                </div>
               </div>
 
-              <div className="mt-auto flex flex-col sm:flex-row gap-3">
+              <div className="mt-auto flex flex-col gap-3 sm:flex-row">
                 <Button
                   type="button"
-                  className="btn-accent flex-1 h-12"
-                  disabled={adding}
+                  className="btn-accent h-12 flex-1"
+                  disabled={adding || selectedQuantity < 1}
                   onClick={() => void handleAddToCart()}
                 >
                   {adding ? (
@@ -227,12 +333,12 @@ export const ProductDetail = () => {
                   ) : (
                     <ShoppingCart className="mr-2 h-4 w-4" />
                   )}
-                  Add to cart
+                  {hasAvailableSize ? "Add to cart" : "Unavailable"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 h-12 rounded-full"
+                  className="h-12 flex-1 rounded-full"
                   onClick={() => navigate("/cart")}
                 >
                   View cart

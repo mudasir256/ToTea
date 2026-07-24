@@ -13,7 +13,7 @@ import type { Profile } from "@/types/database";
 import { toast } from "sonner";
 
 const PROFILE_COLUMNS =
-  "id, auth_user_id, full_name, email, profile_image_url, contact_number, address_line_1, address_line_2, city, state, postal_code, country, created_at, updated_at";
+  "id, full_name, email, profile_image_url, contact_number, address_line_1, address_line_2, city, state, postal_code, country, role, created_at, updated_at";
 
 type AuthContextValue = {
   user: User | null;
@@ -56,7 +56,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
     .select(PROFILE_COLUMNS)
-    .eq("auth_user_id", userId)
+    .eq("id", userId)
     .maybeSingle();
   if (error) {
     console.error(error);
@@ -70,40 +70,27 @@ async function ensureProfileRecord(user: User, fullName?: string): Promise<Profi
   if (!supabase) return null;
 
   const existing = await fetchProfile(user.id);
-  if (existing) {
-    const nextName =
-      fullName?.trim() ||
-      (user.user_metadata?.full_name as string | undefined) ||
-      (user.user_metadata?.name as string | undefined);
-    if (nextName && !existing.full_name) {
-      await supabase
-        .from("profiles")
-        .update({ full_name: nextName })
-        .eq("auth_user_id", user.id);
-      return fetchProfile(user.id);
+  if (!existing) {
+    console.error(
+      "No customer profile was found for the authenticated user. The Supabase new-user trigger should create it.",
+    );
+    return null;
+  }
+
+  const requestedName = fullName?.trim();
+  if (requestedName && requestedName !== existing.full_name) {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name: requestedName })
+      .eq("id", user.id);
+    if (error) {
+      console.error(error);
+      return existing;
     }
-    return existing;
+    return fetchProfile(user.id);
   }
 
-  const name =
-    fullName?.trim() ||
-    (user.user_metadata?.full_name as string | undefined) ||
-    (user.user_metadata?.name as string | undefined) ||
-    "";
-
-  const { error } = await supabase.from("profiles").insert({
-    auth_user_id: user.id,
-    email: user.email || "",
-    full_name: name,
-  });
-
-  if (error && error.code !== "23505") {
-    console.error(error);
-  }
-
-  await supabase.from("carts").upsert({ user_id: user.id }, { onConflict: "user_id" });
-
-  return fetchProfile(user.id);
+  return existing;
 }
 
 function friendlyAuthError(error: unknown): Error {

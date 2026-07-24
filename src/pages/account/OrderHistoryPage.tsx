@@ -14,6 +14,10 @@ import { Button } from "@/components/ui/button";
 
 const PAGE_SIZE = 10;
 
+function formatOrderMoney(amount: number) {
+  return formatMoney(Math.round(Number(amount) * 100));
+}
+
 export default function OrderHistoryPage() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -50,7 +54,7 @@ export default function OrderHistoryPage() {
       }
 
       const rows = (data ?? []) as Order[];
-      setOrders((prev) => (page === 0 ? rows : [...prev, ...rows]));
+      setOrders((previous) => (page === 0 ? rows : [...previous, ...rows]));
       setHasMore(rows.length === PAGE_SIZE);
       setLoading(false);
     };
@@ -91,13 +95,14 @@ export default function OrderHistoryPage() {
             <div className="space-y-4">
               {orders.map((order) => {
                 const { date, time } = formatDateTime(order.created_at);
+                const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
                 return (
                   <article
                     key={order.id}
-                    className="rounded-3xl border border-border bg-card p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         <h2 className="font-semibold">{order.order_number}</h2>
                         <OrderStatusBadge status={order.order_status} />
                         <PaymentStatusBadge status={order.payment_status} />
@@ -105,9 +110,9 @@ export default function OrderHistoryPage() {
                       <p className="text-sm text-muted-foreground">
                         {date} · {time}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {order.item_count} item{order.item_count === 1 ? "" : "s"} ·{" "}
-                        {formatMoney(order.total_amount_cents, order.currency)}
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {itemCount} item{itemCount === 1 ? "" : "s"} ·{" "}
+                        {formatOrderMoney(order.total)}
                       </p>
                     </div>
                     <Button asChild className="rounded-2xl">
@@ -121,7 +126,7 @@ export default function OrderHistoryPage() {
                   variant="outline"
                   className="rounded-2xl"
                   disabled={loading}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => setPage((current) => current + 1)}
                 >
                   {loading ? "Loading..." : "Load more"}
                 </Button>

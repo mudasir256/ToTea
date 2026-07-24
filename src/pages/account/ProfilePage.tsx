@@ -68,7 +68,7 @@ export default function ProfilePage() {
         postal_code: values.postal_code || null,
         country: "US",
       })
-      .eq("auth_user_id", user.id);
+      .eq("id", user.id);
 
     if (error) {
       setFormError(error.message);
@@ -109,7 +109,7 @@ export default function ProfilePage() {
       const { error } = await supabase
         .from("profiles")
         .update({ profile_image_url: `${data.publicUrl}?t=${Date.now()}` })
-        .eq("auth_user_id", user.id);
+        .eq("id", user.id);
       if (error) throw error;
       await refreshProfile();
       toast.success("Profile image updated");
