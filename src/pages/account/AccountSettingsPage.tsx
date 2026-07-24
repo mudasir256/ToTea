@@ -27,9 +27,6 @@ export default function AccountSettingsPage() {
             <Button asChild variant="outline" className="rounded-2xl w-full sm:w-auto ml-0 sm:ml-2">
               <Link to="/account/profile">Edit profile</Link>
             </Button>
-            <Button asChild variant="outline" className="rounded-2xl w-full sm:w-auto ml-0 sm:ml-2">
-              <Link to="/pos">In-store Square POS</Link>
-            </Button>
             <div>
               <Button
                 variant="destructive"

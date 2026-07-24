@@ -131,9 +131,7 @@ export default function OrderDetailsPage() {
                 Payment:{" "}
                 {order.payment_method === "square_card"
                   ? "Card (Square online)"
-                  : order.payment_method === "square_pos"
-                    ? "Square Point of Sale"
-                    : order.payment_method}
+                  : order.payment_method}
               </p>
             </section>
             <section className="rounded-3xl border border-border bg-card p-6 space-y-2 text-sm">

@@ -30,7 +30,11 @@ export const addressSchema = z.object({
   city: z.string().trim().min(2, "City is required").max(100),
   state: z.string().trim().min(2, "State is required").max(100),
   postal_code: z.string().trim().min(3, "Postal code is required").max(20),
-  country: z.string().trim().min(2).max(100).default("US"),
+  country: z
+    .string()
+    .trim()
+    .refine((value) => value === "US", "Country must be United States")
+    .default("US"),
 });
 
 export const loginSchema = z.object({
@@ -72,7 +76,7 @@ export const profileUpdateSchema = z.object({
   city: z.string().trim().max(100).optional().or(z.literal("")),
   state: z.string().trim().max(100).optional().or(z.literal("")),
   postal_code: z.string().trim().max(20).optional().or(z.literal("")),
-  country: z.string().trim().max(100).optional().or(z.literal("")),
+  country: z.union([z.literal("US"), z.literal("")]).optional(),
 });
 
 export function normalizePhone(value: string): string {

@@ -46,7 +46,7 @@ export default function ProfilePage() {
       city: profile.city ?? "",
       state: profile.state ?? "",
       postal_code: profile.postal_code ?? "",
-      country: profile.country ?? "US",
+      country: "US",
     });
   }, [profile, form]);
 
@@ -66,7 +66,7 @@ export default function ProfilePage() {
         city: values.city || null,
         state: values.state || null,
         postal_code: values.postal_code || null,
-        country: values.country || "US",
+        country: "US",
       })
       .eq("auth_user_id", user.id);
 
@@ -238,7 +238,8 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="country">Country</Label>
-                  <Input id="country" {...form.register("country")} />
+                  <Input id="country" {...form.register("country")} readOnly />
+                  <p className="text-xs text-muted-foreground">United States (ISO code: US)</p>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">

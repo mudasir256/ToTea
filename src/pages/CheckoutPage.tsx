@@ -108,7 +108,7 @@ export default function CheckoutPage() {
       city: profile.city || "",
       state: profile.state || "",
       postal_code: profile.postal_code || "",
-      country: profile.country || "US",
+      country: "US",
     });
   }, [profile, form]);
 
@@ -202,7 +202,7 @@ export default function CheckoutPage() {
           city: values.city,
           state: values.state,
           postalCode: values.postal_code,
-          countryCode: values.country || "US",
+          countryCode: "US",
         },
       });
 
@@ -229,7 +229,7 @@ export default function CheckoutPage() {
             city: values.city,
             state: values.state,
             postal_code: values.postal_code,
-            country: values.country || "US",
+            country: "US",
           },
           saveContact: needsContact || !profile?.contact_number,
         },
@@ -370,7 +370,8 @@ export default function CheckoutPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="country">Country</Label>
-                    <Input id="country" {...form.register("country")} />
+                    <Input id="country" {...form.register("country")} readOnly />
+                    <p className="text-xs text-muted-foreground">United States (ISO code: US)</p>
                   </div>
                 </div>
               </section>

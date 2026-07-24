@@ -55,9 +55,6 @@ export function CartSummary({
           <Button asChild className="btn-accent mt-6 w-full h-12" disabled={disabled}>
             <Link to={checkoutHref}>Proceed to checkout</Link>
           </Button>
-          <Button asChild variant="outline" className="mt-3 w-full h-11 rounded-2xl">
-            <Link to="/pos">Pay in store (Square POS)</Link>
-          </Button>
         </>
       ) : null}
     </div>

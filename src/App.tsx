@@ -28,8 +28,6 @@ const ProfilePage = lazy(() => import("./pages/account/ProfilePage"));
 const AccountSettingsPage = lazy(() => import("./pages/account/AccountSettingsPage"));
 const OrderHistoryPage = lazy(() => import("./pages/account/OrderHistoryPage"));
 const OrderDetailsPage = lazy(() => import("./pages/account/OrderDetailsPage"));
-const PosCheckoutPage = lazy(() => import("./pages/pos/PosCheckoutPage"));
-const PosCallbackPage = lazy(() => import("./pages/pos/PosCallbackPage"));
 
 const queryClient = new QueryClient();
 
@@ -67,22 +65,6 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <CheckoutPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/pos"
-                  element={
-                    <ProtectedRoute>
-                      <PosCheckoutPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/pos/callback"
-                  element={
-                    <ProtectedRoute>
-                      <PosCallbackPage />
                     </ProtectedRoute>
                   }
                 />

@@ -23,7 +23,7 @@ export type PaymentStatus =
   | "refunded"
   | "cancelled";
 
-export type PaymentMethod = "square_card" | "square_pos" | "cash_on_delivery";
+export type PaymentMethod = "square_card";
 
 export type ShippingAddress = {
   address_line_1: string;
