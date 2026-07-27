@@ -151,25 +151,60 @@ export type MenuStockAvailability = {
 export type Database = {
   public: {
     Tables: {
-      profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile> };
+      profiles: {
+        Row: Profile;
+        Insert: Partial<Profile>;
+        Update: Partial<Profile>;
+        Relationships: [];
+      };
       menu_categories: {
         Row: MenuCategory;
         Insert: Partial<MenuCategory>;
         Update: Partial<MenuCategory>;
+        Relationships: [];
       };
-      menu_items: { Row: MenuItem; Insert: Partial<MenuItem>; Update: Partial<MenuItem> };
+      menu_items: {
+        Row: MenuItem;
+        Insert: Partial<MenuItem>;
+        Update: Partial<MenuItem>;
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "menu_categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       menu_item_variants: {
         Row: MenuItemVariant;
         Insert: Partial<MenuItemVariant>;
         Update: Partial<MenuItemVariant>;
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_variants_menu_item_id_fkey";
+            columns: ["menu_item_id"];
+            isOneToOne: false;
+            referencedRelation: "menu_items";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       menu_toppings: {
         Row: MenuTopping;
         Insert: Partial<MenuTopping>;
         Update: Partial<MenuTopping>;
+        Relationships: [];
       };
-      orders: { Row: Order; Insert: Partial<Order>; Update: Partial<Order> };
+      orders: {
+        Row: Order;
+        Insert: Partial<Order>;
+        Update: Partial<Order>;
+        Relationships: [];
+      };
     };
+    Views: Record<string, never>;
     Functions: {
       get_public_menu_stock: {
         Args: {
@@ -178,5 +213,7 @@ export type Database = {
         Returns: MenuStockAvailability[];
       };
     };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 };
