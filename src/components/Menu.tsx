@@ -4,15 +4,23 @@ import { Loader2 } from "lucide-react";
 import { ScrollLink } from "@/components/ScrollLink";
 import { getSupabase } from "@/lib/supabase";
 import { menuItemHasStock } from "@/lib/menuStock";
-import type { MenuCategory, MenuItem, MenuStockAvailability, MenuTopping } from "@/types/database";
+import type { MenuCategory, MenuItemWithVariants, MenuStockAvailability, MenuTopping } from "@/types/database";
 
 interface MenuProps {
   hideHeader?: boolean;
 }
 
 type MenuCategoryWithItems = MenuCategory & {
-  items: MenuItem[];
+  items: MenuItemWithVariants[];
 };
+
+function menuPriceLabel(item: MenuItemWithVariants) {
+  const prices = (item.menu_item_variants ?? [])
+    .map((variant) => Number(variant.price))
+    .filter((price) => Number.isFinite(price));
+  const lowestPrice = prices.length > 0 ? Math.min(...prices) : Number(item.price);
+  return `${prices.length > 1 ? "From " : ""}$${lowestPrice.toFixed(2)}`;
+}
 
 export const Menu = ({ hideHeader = false }: MenuProps) => {
   const [categories, setCategories] = useState<MenuCategoryWithItems[]>([]);
@@ -40,7 +48,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
           .order("sort_order", { ascending: true }),
         supabase
           .from("menu_items")
-          .select("*")
+          .select("*, menu_item_variants(*)")
           .eq("is_available", true)
           .order("sort_order", { ascending: true }),
         supabase
@@ -66,7 +74,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         return;
       }
 
-      const items = (itemResult.data ?? []) as MenuItem[];
+      const items = (itemResult.data ?? []) as MenuItemWithVariants[];
       const grouped = ((categoryResult.data ?? []) as MenuCategory[])
         .map((category) => ({
           ...category,
@@ -189,7 +197,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                                 {item.name}
                               </h4>
                               <span className="shrink-0 text-sm font-bold text-amber-700">
-                                ${Number(item.price).toFixed(2)}
+                                {menuPriceLabel(item)}
                               </span>
                             </div>
                           </div>

@@ -10,16 +10,37 @@ import {
   type CartToppingSelection,
 } from "@/features/cart/CartProvider";
 import { getSupabase } from "@/lib/supabase";
-import type { MenuItem, MenuStockAvailability, MenuTopping } from "@/types/database";
+import type { MenuItemWithVariants, MenuStockAvailability, MenuTopping } from "@/types/database";
 import NotFound from "@/pages/NotFound";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+
+function variantsFor(item: MenuItemWithVariants) {
+  const variants = [...(item.menu_item_variants ?? [])].sort(
+    (left, right) => left.sort_order - right.sort_order,
+  );
+  if (variants.length > 0) return variants;
+
+  return item.sizes
+    .split(",")
+    .map((size) => size.trim())
+    .filter(Boolean)
+    .map((size, index) => ({
+      id: `legacy-${index}-${size}`,
+      menu_item_id: item.id,
+      size,
+      price: item.price,
+      sort_order: index,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+    }));
+}
 
 export const ProductDetail = () => {
   const { productName } = useParams<{ productName: string }>();
   const navigate = useNavigate();
   const { addItem } = useCart();
-  const [item, setItem] = useState<MenuItem | null>(null);
+  const [item, setItem] = useState<MenuItemWithVariants | null>(null);
   const [stock, setStock] = useState<MenuStockAvailability[]>([]);
   const [toppings, setToppings] = useState<MenuTopping[]>([]);
   const [selectedToppingIds, setSelectedToppingIds] = useState<string[]>([]);
@@ -49,7 +70,7 @@ export const ProductDetail = () => {
       const [itemResult, toppingResult] = await Promise.all([
         supabase
           .from("menu_items")
-          .select("*")
+          .select("*, menu_item_variants(*)")
           .eq("name", decodedName)
           .eq("is_available", true)
           .maybeSingle(),
@@ -71,7 +92,7 @@ export const ProductDetail = () => {
         console.error("Unable to load toppings", toppingResult.error);
       }
 
-      const menuItem = itemResult.data as MenuItem;
+      const menuItem = itemResult.data as MenuItemWithVariants;
       const { data: category } = await supabase
         .from("menu_categories")
         .select("name")
@@ -87,10 +108,7 @@ export const ProductDetail = () => {
       }
 
       if (cancelled) return;
-      const sizes = menuItem.sizes
-        .split(",")
-        .map((size) => size.trim())
-        .filter(Boolean);
+      const sizes = variantsFor(menuItem).map((variant) => variant.size);
       const firstAvailableSize =
         sizes.find(
           (size) => availableQuantity(currentStock, menuItem.id, size) > 0,
@@ -111,13 +129,10 @@ export const ProductDetail = () => {
     };
   }, [decodedName]);
 
+  const variants = useMemo(() => (item ? variantsFor(item) : []), [item]);
   const sizes = useMemo(
-    () =>
-      item?.sizes
-        .split(",")
-        .map((size) => size.trim())
-        .filter(Boolean) ?? [],
-    [item],
+    () => variants.map((variant) => variant.size),
+    [variants],
   );
   const ingredients = useMemo(
     () =>
@@ -148,7 +163,12 @@ export const ProductDetail = () => {
     [selectedToppingSelections],
   );
 
-  const basePriceCents = item ? Math.round(Number(item.price) * 100) : 0;
+  const selectedVariant = variants.find(
+    (variant) => variant.size.toLowerCase() === selectedSize.toLowerCase(),
+  );
+  const basePriceCents = selectedVariant
+    ? Math.round(Number(selectedVariant.price) * 100)
+    : 0;
   const totalUnitPriceCents = basePriceCents + toppingsPriceCents;
 
   const toppingGroups = useMemo(
@@ -352,6 +372,9 @@ export const ProductDetail = () => {
                           }`}
                         >
                           {size}
+                          <span className="ml-1 opacity-75">
+                            · {formatMoney(Math.round(Number(variants.find((variant) => variant.size === size)?.price ?? 0) * 100))}
+                          </span>
                         </button>
                       );
                     })}

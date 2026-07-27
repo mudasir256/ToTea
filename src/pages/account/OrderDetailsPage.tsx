@@ -135,9 +135,9 @@ export default function OrderDetailsPage() {
           <section className="rounded-3xl border border-border bg-card p-6">
             <h2 className="mb-4 text-lg font-semibold">Items</h2>
             <div className="space-y-4">
-              {order.items.map((item) => (
+              {order.items.map((item, index) => (
                 <div
-                  key={`${item.menu_item_id}:${item.size}`}
+                  key={`${item.menu_item_id}:${item.size}:${index}`}
                   className="flex items-center gap-4"
                 >
                   <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-secondary">
@@ -155,6 +155,11 @@ export default function OrderDetailsPage() {
                       Size: {item.size} · Qty {item.quantity} ·{" "}
                       {formatOrderMoney(item.unit_price)} each
                     </p>
+                    {item.toppings && item.toppings.length > 0 ? (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Toppings: {item.toppings.map((topping) => topping.name).join(", ")}
+                      </p>
+                    ) : null}
                   </div>
                   <p className="font-semibold">{formatOrderMoney(item.line_total)}</p>
                 </div>

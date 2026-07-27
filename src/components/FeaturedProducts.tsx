@@ -6,7 +6,7 @@ import { menuItemHasStock } from "@/lib/menuStock";
 import { getSupabase } from "@/lib/supabase";
 import type {
   MenuCategory,
-  MenuItem,
+  MenuItemWithVariants,
   MenuStockAvailability,
 } from "@/types/database";
 
@@ -16,9 +16,17 @@ const featuredNames = [
   "Matcha Latte",
 ];
 
-type FeaturedItem = MenuItem & {
+type FeaturedItem = MenuItemWithVariants & {
   category_name: string;
 };
+
+function menuPriceLabel(item: MenuItemWithVariants) {
+  const prices = (item.menu_item_variants ?? [])
+    .map((variant) => Number(variant.price))
+    .filter((price) => Number.isFinite(price));
+  const lowestPrice = prices.length > 0 ? Math.min(...prices) : Number(item.price);
+  return `${prices.length > 1 ? "From " : ""}$${lowestPrice.toFixed(2)}`;
+}
 
 export const FeaturedProducts = () => {
   const [items, setItems] = useState<FeaturedItem[]>([]);
@@ -38,7 +46,7 @@ export const FeaturedProducts = () => {
       const [itemResult, stockResult] = await Promise.all([
         supabase
           .from("menu_items")
-          .select("*")
+          .select("*, menu_item_variants(*)")
           .in("name", featuredNames)
           .eq("is_available", true),
         supabase.rpc("get_public_menu_stock", { p_menu_item_id: null }),
@@ -54,7 +62,7 @@ export const FeaturedProducts = () => {
         return;
       }
 
-      const menuItems = (itemResult.data ?? []) as MenuItem[];
+      const menuItems = (itemResult.data ?? []) as MenuItemWithVariants[];
       const categoryIds = [...new Set(menuItems.map((item) => item.category_id))];
       const categoryResult =
         categoryIds.length > 0
@@ -150,7 +158,7 @@ export const FeaturedProducts = () => {
                         </p>
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-base font-bold text-accent">
-                            ${Number(product.price).toFixed(2)}
+                            {menuPriceLabel(product)}
                           </span>
                           <span className="flex items-center gap-1.5 text-xs font-medium text-white transition-all group-hover:gap-2 group-hover:text-accent">
                             View Details

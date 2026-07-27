@@ -12,7 +12,9 @@ import { catalogProducts } from "@/data/catalog";
 import { getMenuImage } from "@/lib/menuImages";
 import { toast } from "sonner";
 
-const LOCAL_CART_KEY = "totea-guest-cart-v1";
+// Price variants changed the cart payload contract; use a new key so stale
+// single-price cart lines cannot reach checkout after the migration.
+const LOCAL_CART_KEY = "totea-guest-cart-v2";
 const MAX_ITEM_QUANTITY = 25;
 
 export type CartToppingSelection = {
