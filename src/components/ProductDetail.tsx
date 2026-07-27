@@ -4,9 +4,13 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Check, Loader2, ShoppingCart } from "lucide-react";
 import { formatMoney } from "@/lib/money";
 import { availableQuantity, fetchMenuStock } from "@/lib/menuStock";
-import { useCart } from "@/features/cart/CartProvider";
+import {
+  buildCartVariantId,
+  useCart,
+  type CartToppingSelection,
+} from "@/features/cart/CartProvider";
 import { getSupabase } from "@/lib/supabase";
-import type { MenuItem, MenuStockAvailability } from "@/types/database";
+import type { MenuItem, MenuStockAvailability, MenuTopping } from "@/types/database";
 import NotFound from "@/pages/NotFound";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -17,6 +21,8 @@ export const ProductDetail = () => {
   const { addItem } = useCart();
   const [item, setItem] = useState<MenuItem | null>(null);
   const [stock, setStock] = useState<MenuStockAvailability[]>([]);
+  const [toppings, setToppings] = useState<MenuTopping[]>([]);
+  const [selectedToppingIds, setSelectedToppingIds] = useState<string[]>([]);
   const [categoryName, setCategoryName] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,22 +46,32 @@ export const ProductDetail = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("menu_items")
-        .select("*")
-        .eq("name", decodedName)
-        .eq("is_available", true)
-        .maybeSingle();
+      const [itemResult, toppingResult] = await Promise.all([
+        supabase
+          .from("menu_items")
+          .select("*")
+          .eq("name", decodedName)
+          .eq("is_available", true)
+          .maybeSingle(),
+        supabase
+          .from("menu_toppings")
+          .select("*")
+          .eq("is_available", true)
+          .order("sort_order", { ascending: true }),
+      ]);
 
       if (cancelled) return;
-      if (error || !data) {
-        if (error) console.error("Unable to load menu item", error);
+      if (itemResult.error || !itemResult.data) {
+        if (itemResult.error) console.error("Unable to load menu item", itemResult.error);
         setNotFound(true);
         setLoading(false);
         return;
       }
+      if (toppingResult.error) {
+        console.error("Unable to load toppings", toppingResult.error);
+      }
 
-      const menuItem = data as MenuItem;
+      const menuItem = itemResult.data as MenuItem;
       const { data: category } = await supabase
         .from("menu_categories")
         .select("name")
@@ -82,6 +98,8 @@ export const ProductDetail = () => {
 
       setItem(menuItem);
       setStock(currentStock);
+      setToppings((toppingResult.data ?? []) as MenuTopping[]);
+      setSelectedToppingIds([]);
       setCategoryName((category as { name?: string } | null)?.name ?? "ToTea menu");
       setSelectedSize(firstAvailableSize);
       setLoading(false);
@@ -109,6 +127,51 @@ export const ProductDetail = () => {
         .filter(Boolean) ?? [],
     [item],
   );
+
+  const selectedToppings = useMemo(
+    () => toppings.filter((topping) => selectedToppingIds.includes(topping.id)),
+    [toppings, selectedToppingIds],
+  );
+
+  const selectedToppingSelections: CartToppingSelection[] = useMemo(
+    () =>
+      selectedToppings.map((topping) => ({
+        id: topping.id,
+        name: topping.name,
+        price_cents: Math.round(Number(topping.price) * 100),
+      })),
+    [selectedToppings],
+  );
+
+  const toppingsPriceCents = useMemo(
+    () => selectedToppingSelections.reduce((sum, topping) => sum + topping.price_cents, 0),
+    [selectedToppingSelections],
+  );
+
+  const basePriceCents = item ? Math.round(Number(item.price) * 100) : 0;
+  const totalUnitPriceCents = basePriceCents + toppingsPriceCents;
+
+  const toppingGroups = useMemo(
+    () =>
+      [
+        { title: "Standard toppings", category: "standard" as const },
+        { title: "Cream toppings", category: "cream" as const },
+      ]
+        .map((group) => ({
+          ...group,
+          items: toppings.filter((topping) => topping.category === group.category),
+        }))
+        .filter((group) => group.items.length > 0),
+    [toppings],
+  );
+
+  const toggleTopping = (toppingId: string) => {
+    setSelectedToppingIds((current) =>
+      current.includes(toppingId)
+        ? current.filter((id) => id !== toppingId)
+        : [...current, toppingId],
+    );
+  };
 
   if (loading) {
     return (
@@ -166,14 +229,20 @@ export const ProductDetail = () => {
         return;
       }
 
-      const priceCents = Math.round(Number(item.price) * 100);
       await addItem({
         product_id: item.id,
-        product_variant_id: `${item.id}:${selectedSize.toLowerCase()}`,
+        product_variant_id: buildCartVariantId(
+          item.id,
+          selectedSize,
+          selectedToppingSelections,
+        ),
         product_name: item.name,
         product_image: item.image_url,
-        selected_options: { size: selectedSize },
-        unit_price_cents: priceCents,
+        selected_options: {
+          size: selectedSize,
+          toppings: selectedToppingSelections,
+        },
+        unit_price_cents: totalUnitPriceCents,
         stock_quantity: currentQuantity,
         quantity: 1,
       });
@@ -251,8 +320,13 @@ export const ProductDetail = () => {
                     Price
                   </h3>
                   <p className="text-2xl font-bold text-foreground">
-                    {formatMoney(Math.round(Number(item.price) * 100))}
+                    {formatMoney(totalUnitPriceCents)}
                   </p>
+                  {toppingsPriceCents > 0 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Includes {formatMoney(toppingsPriceCents)} in toppings
+                    </p>
+                  ) : null}
                 </div>
                 <div className="rounded-3xl border border-border bg-secondary p-6">
                   <h3 className="mb-2 text-sm uppercase tracking-wider text-muted-foreground">
@@ -321,6 +395,49 @@ export const ProductDetail = () => {
                 </div>
               </div>
 
+              {toppingGroups.length > 0 ? (
+                <div className="mb-8 rounded-3xl border border-border bg-secondary p-6">
+                  <h3 className="mb-2 text-sm uppercase tracking-wider text-muted-foreground">
+                    Add toppings
+                  </h3>
+                  <p className="mb-4 text-sm text-muted-foreground">
+                    Optional — select any toppings to add to your drink.
+                  </p>
+                  <div className="space-y-5">
+                    {toppingGroups.map((group) => (
+                      <div key={group.category}>
+                        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {group.title}
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {group.items.map((topping) => {
+                            const selected = selectedToppingIds.includes(topping.id);
+                            const priceCents = Math.round(Number(topping.price) * 100);
+
+                            return (
+                              <button
+                                key={topping.id}
+                                type="button"
+                                onClick={() => toggleTopping(topping.id)}
+                                aria-pressed={selected}
+                                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                                  selected
+                                    ? "border-accent bg-accent text-accent-foreground"
+                                    : "border-border bg-background hover:border-accent/50"
+                                }`}
+                              >
+                                {topping.name}
+                                {priceCents > 0 ? ` · +${formatMoney(priceCents)}` : ""}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="mt-auto flex flex-col gap-3 sm:flex-row">
                 <Button
                   type="button"
@@ -333,7 +450,9 @@ export const ProductDetail = () => {
                   ) : (
                     <ShoppingCart className="mr-2 h-4 w-4" />
                   )}
-                  {hasAvailableSize ? "Add to cart" : "Unavailable"}
+                  {hasAvailableSize
+                    ? `Add to cart · ${formatMoney(totalUnitPriceCents)}`
+                    : "Unavailable"}
                 </Button>
                 <Button
                   type="button"

@@ -188,6 +188,7 @@ export default function CheckoutPage() {
       menuItemId: item.product_id,
       quantity: item.quantity,
       size: item.selected_options.size,
+      toppingIds: (item.selected_options.toppings ?? []).map((topping) => topping.id),
     }));
 
     if (checkoutItems.some((item) => !UUID_PATTERN.test(item.menuItemId))) {
@@ -422,14 +423,21 @@ export default function CheckoutPage() {
               <div className="rounded-3xl border border-border bg-card p-6">
                 <h2 className="mb-4 text-lg font-semibold">Products</h2>
                 <ul className="space-y-3 text-sm">
-                  {items.map((item) => (
-                    <li key={item.id} className="flex justify-between gap-3">
-                      <span>
-                        {item.product_name} ({item.selected_options.size}) × {item.quantity}
-                      </span>
-                      <span>{formatMoney(item.unit_price_cents * item.quantity)}</span>
-                    </li>
-                  ))}
+                  {items.map((item) => {
+                    const toppings = item.selected_options.toppings ?? [];
+                    return (
+                      <li key={item.id} className="flex justify-between gap-3">
+                        <span>
+                          {item.product_name} ({item.selected_options.size})
+                          {toppings.length > 0
+                            ? ` · ${toppings.map((topping) => topping.name).join(", ")}`
+                            : ""}{" "}
+                          × {item.quantity}
+                        </span>
+                        <span>{formatMoney(item.unit_price_cents * item.quantity)}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
               <CartSummary

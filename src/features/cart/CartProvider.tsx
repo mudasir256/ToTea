@@ -15,17 +15,38 @@ import { toast } from "sonner";
 const LOCAL_CART_KEY = "totea-guest-cart-v1";
 const MAX_ITEM_QUANTITY = 25;
 
+export type CartToppingSelection = {
+  id: string;
+  name: string;
+  price_cents: number;
+};
+
 export type LocalCartItem = {
   id: string;
   product_id: string;
   product_variant_id: string;
   product_name: string;
   product_image: string | null;
-  selected_options: { size: string };
+  selected_options: { size: string; toppings?: CartToppingSelection[] };
   quantity: number;
   unit_price_cents: number;
   stock_quantity: number;
 };
+
+/** Stable cart line key so same size + same toppings merge, different toppings do not. */
+export function buildCartVariantId(
+  productId: string,
+  sizeLabel: string,
+  toppings: CartToppingSelection[] = [],
+): string {
+  const sizeKey = sizeLabel.toLowerCase();
+  if (toppings.length === 0) return `${productId}:${sizeKey}`;
+  const toppingKey = [...toppings]
+    .map((topping) => topping.id)
+    .sort()
+    .join(",");
+  return `${productId}:${sizeKey}:toppings:${toppingKey}`;
+}
 
 type CartContextValue = {
   items: LocalCartItem[];

@@ -23,6 +23,18 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: Props) {
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-foreground truncate">{item.product_name}</h3>
         <p className="text-sm text-muted-foreground">Size: {item.selected_options.size}</p>
+        {item.selected_options.toppings && item.selected_options.toppings.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Toppings:{" "}
+            {item.selected_options.toppings
+              .map((topping) =>
+                topping.price_cents > 0
+                  ? `${topping.name} (+${formatMoney(topping.price_cents)})`
+                  : topping.name,
+              )
+              .join(", ")}
+          </p>
+        ) : null}
         <p className="mt-1 font-medium">{formatMoney(item.unit_price_cents)}</p>
         {outOfStock ? (
           <p className="mt-1 text-sm text-destructive">Out of stock</p>

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { calcCartSubtotal, calcLineTotal, calcOrderTotals, formatMoney } from "@/lib/money";
 import { isSafeReturnPath, normalizePhone, contactNumberSchema, signupSchema } from "@/lib/validation";
-import { mergeItems, type LocalCartItem } from "@/features/cart/CartProvider";
+import {
+  buildCartVariantId,
+  mergeItems,
+  type LocalCartItem,
+} from "@/features/cart/CartProvider";
 import { catalogProducts, getCatalogProductByName } from "@/data/catalog";
 
 describe("money helpers", () => {
@@ -94,5 +98,54 @@ describe("cart merge", () => {
     const merged = mergeItems(existing, incoming);
     expect(merged).toHaveLength(1);
     expect(merged[0].quantity).toBe(3);
+  });
+
+  it("keeps same size with different toppings as separate lines", () => {
+    const existing: LocalCartItem[] = [
+      {
+        id: "1",
+        product_id: "p1",
+        product_variant_id: "p1:regular:toppings:t1",
+        product_name: "Salt Coffee",
+        product_image: null,
+        selected_options: {
+          size: "Regular",
+          toppings: [{ id: "t1", name: "Honey Boba", price_cents: 75 }],
+        },
+        quantity: 1,
+        unit_price_cents: 2575,
+        stock_quantity: 5,
+      },
+    ];
+    const incoming: LocalCartItem[] = [
+      {
+        id: "2",
+        product_id: "p1",
+        product_variant_id: "p1:regular:toppings:t2",
+        product_name: "Salt Coffee",
+        product_image: null,
+        selected_options: {
+          size: "Regular",
+          toppings: [{ id: "t2", name: "Sea Salt Cream", price_cents: 150 }],
+        },
+        quantity: 1,
+        unit_price_cents: 2650,
+        stock_quantity: 5,
+      },
+    ];
+    const merged = mergeItems(existing, incoming);
+    expect(merged).toHaveLength(2);
+  });
+});
+
+describe("buildCartVariantId", () => {
+  it("includes sorted topping ids when present", () => {
+    expect(buildCartVariantId("p1", "Regular")).toBe("p1:regular");
+    expect(
+      buildCartVariantId("p1", "Regular", [
+        { id: "b", name: "Jelly", price_cents: 0 },
+        { id: "a", name: "Honey Boba", price_cents: 75 },
+      ]),
+    ).toBe("p1:regular:toppings:a,b");
   });
 });
