@@ -106,6 +106,14 @@ export type MenuTopping = {
   updated_at: string;
 };
 
+export type Review = {
+  id: string;
+  reviewer_name: string;
+  rating: number;
+  description: string;
+  created_at?: string;
+};
+
 export type OrderItemSnapshot = {
   menu_item_id: string;
   name: string;
@@ -195,6 +203,12 @@ export type Database = {
         Row: MenuTopping;
         Insert: Partial<MenuTopping>;
         Update: Partial<MenuTopping>;
+        Relationships: [];
+      };
+      reviews: {
+        Row: Review;
+        Insert: Partial<Review>;
+        Update: Partial<Review>;
         Relationships: [];
       };
       orders: {

@@ -5,6 +5,7 @@ import { HappyHour } from '@/components/HappyHour';
 import { Menu } from '@/components/Menu';
 import { Locations } from '@/components/Locations';
 import { About } from '@/components/About';
+import { Reviews } from '@/components/Reviews';
 import { OrderOnline } from '@/components/OrderOnline';
 import { Footer } from '@/components/Footer';
 
@@ -21,6 +22,7 @@ const Index = () => {
         <Menu />
         <Locations />
         <About />
+        <Reviews />
         <OrderOnline />
       </main>
       <Footer />
