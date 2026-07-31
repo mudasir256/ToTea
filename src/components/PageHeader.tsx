@@ -12,9 +12,9 @@ export const PageHeader = ({
   subtitle,
 }: PageHeaderProps) => {
   return (
-    <section className="relative overflow-hidden pt-20 md:pt-24">
+    <section className="relative overflow-hidden">
       {/* Warm Gradient Background with Theme Colors */}
-      <div className="relative bg-gradient-to-br from-accent/15 via-accent/10 to-background py-16 md:py-24">
+      <div className="relative bg-gradient-to-br from-accent/15 via-accent/10 to-background pb-16 pt-36 md:pb-24 md:pt-48">
         {/* Subtle Background Elements */}
         <div className="absolute inset-0 pointer-events-none">
           {/* Floating gradient orbs */}

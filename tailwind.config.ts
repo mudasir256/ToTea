@@ -14,10 +14,12 @@ export default {
     },
     extend: {
       fontFamily: {
-        serif: ["Playfair Display", "serif"],
+        serif: ["Fraunces", "serif"],
         sans: ["Inter", "sans-serif"],
       },
       colors: {
+        "accent-hover": "hsl(var(--accent-hover))",
+        "accent-active": "hsl(var(--accent-active))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -61,11 +63,15 @@ export default {
         glow: "0 0 40px hsl(35 90% 55% / 0.3)",
       },
       borderRadius: {
+        sm: "0.5rem",
+        md: "1rem",
+        DEFAULT: "1.5rem",
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-        "4xl": "2rem",
-        "5xl": "2.5rem",
+        xl: "2rem",
+        "2xl": "2.25rem",
+        "3xl": "2.5rem",
+        "4xl": "3rem",
+        "5xl": "3.5rem",
       },
       keyframes: {
         "accordion-down": {

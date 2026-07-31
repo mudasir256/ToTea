@@ -29,9 +29,9 @@ export const Footer = () => {
   };
 
   return (
-    <footer className="bg-primary text-primary-foreground">
-      <div className="container mx-auto px-6 md:px-12 lg:px-20 py-16 md:py-20">
-        <div className="max-w-7xl mx-auto">
+    <footer className="px-4 pb-4 pt-10 sm:px-6 sm:pb-6 lg:px-8">
+      <div className="mx-auto max-w-7xl rounded-[2rem] bg-primary text-primary-foreground">
+        <div className="px-6 py-14 md:px-12 md:py-16">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
             {/* Brand */}
             <motion.div
@@ -65,7 +65,7 @@ export const Footer = () => {
                   <a
                     key={social.label}
                     href={social.href}
-                    className="w-10 h-10 rounded-xl bg-primary-foreground/10 flex items-center justify-center hover:bg-accent transition-colors"
+                    className="w-10 h-10 rounded-full bg-primary-foreground/10 flex items-center justify-center hover:bg-accent transition-colors"
                     aria-label={social.label}
                   >
                     <social.icon size={18} />
@@ -149,12 +149,12 @@ export const Footer = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Your email"
-                  className="px-4 py-3 rounded-xl bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:outline-none focus:border-accent transition-colors"
+                  className="px-4 py-3 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:outline-none focus:border-accent transition-colors"
                   required
                 />
                 <button
                   type="submit"
-                  className="btn-accent !py-3 text-center"
+                  className="btn-accent !rounded-full !py-3 text-center"
                 >
                   Subscribe
                 </button>

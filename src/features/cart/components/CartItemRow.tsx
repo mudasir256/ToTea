@@ -14,8 +14,8 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: Props) {
   const atMax = item.quantity >= item.stock_quantity;
 
   return (
-    <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-4 sm:flex-row sm:items-center">
-      <div className="h-24 w-24 overflow-hidden rounded-2xl bg-secondary shrink-0">
+    <div className="flex flex-col gap-4 rounded border border-border bg-card p-4 sm:flex-row sm:items-center">
+      <div className="h-24 w-24 overflow-hidden rounded bg-secondary shrink-0">
         {item.product_image ? (
           <img src={item.product_image} alt="" className="h-full w-full object-cover" />
         ) : null}
@@ -35,15 +35,17 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: Props) {
               .join(", ")}
           </p>
         ) : null}
-        <p className="mt-1 font-medium">{formatMoney(item.unit_price_cents)}</p>
+        <p className="mt-1 font-medium tabular-nums text-accent">
+          {formatMoney(item.unit_price_cents)}
+        </p>
         {outOfStock ? (
           <p className="mt-1 text-sm text-destructive">Out of stock</p>
         ) : atMax ? (
-          <p className="mt-1 text-sm text-amber-700">Maximum available quantity selected</p>
+          <p className="mt-1 text-sm text-accent">Maximum available quantity selected</p>
         ) : null}
       </div>
       <div className="flex items-center gap-3">
-        <div className="flex items-center rounded-2xl border border-border bg-background">
+        <div className="flex items-center rounded-full border border-border bg-background">
           <Button
             type="button"
             variant="ghost"

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@300..700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,48 +6,51 @@
 
 @layer base {
   :root {
-    /* Warm cream/off-white background */
-    --background: 40 30% 97%;
-    --foreground: 0 0% 8%;
+    /* Paper #FAF6F0 */
+    --background: 36 50% 96%;
+    /* Warm ink #4A3626 — replaces pure black */
+    --foreground: 27 32% 22%;
 
-    /* Cards with subtle warmth */
-    --card: 40 20% 99%;
-    --card-foreground: 0 0% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 27 32% 22%;
 
-    --popover: 40 20% 99%;
-    --popover-foreground: 0 0% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 27 32% 22%;
 
-    /* Deep charcoal primary */
-    --primary: 0 0% 8%;
-    --primary-foreground: 40 30% 97%;
+    --primary: 27 32% 22%;
+    --primary-foreground: 36 50% 96%;
 
-    /* Light gray secondary */
-    --secondary: 40 10% 94%;
-    --secondary-foreground: 0 0% 15%;
+    --secondary: 34 38% 92%;
+    --secondary-foreground: 27 32% 22%;
 
-    --muted: 40 10% 92%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 34 34% 93%;
+    /* Muted #8A7D6F */
+    --muted-foreground: 31 11% 49%;
 
-    /* Warm amber accent */
-    --accent: 35 90% 55%;
+    /* Amber #B8762F */
+    --accent: 31 59% 45%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 8 55% 44%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 15% 88%;
-    --input: 40 15% 88%;
-    --ring: 35 90% 55%;
+    /* Line #E7DDD1 */
+    --border: 33 31% 86%;
+    --input: 33 31% 86%;
+    --ring: 31 59% 45%;
 
-    --radius: 0.75rem;
+    --radius: 1.75rem;
 
     /* Custom tokens */
     --glass: 0 0% 100% / 0.7;
     --glass-border: 0 0% 100% / 0.3;
-    --gold: 35 90% 55%;
-    --gold-light: 40 95% 70%;
-    --charcoal: 0 0% 12%;
-    --cream: 40 30% 97%;
+    --gold: 31 59% 45%;
+    --gold-light: 31 55% 56%;
+    --charcoal: 27 32% 22%;
+    --cream: 36 50% 96%;
+    /* Amber press states — the CTA must visibly darken on tap */
+    --accent-hover: 31 62% 38%;
+    --accent-active: 31 66% 31%;
 
     /* Gradients */
     --gradient-hero: linear-gradient(180deg, hsl(40 30% 97%) 0%, hsl(40 20% 94%) 100%);
@@ -104,11 +107,12 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Outfit', 'Inter', sans-serif;
+    font-family: 'Inter', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Fraunces', serif;
+    font-variation-settings: 'SOFT' 40, 'WONK' 0;
   }
 
   /* Hide scrollbar for cleaner look */
@@ -150,27 +154,31 @@
     border: 1px solid hsl(0 0% 100% / 0.1);
   }
 
+  /* Flat amber highlight — the spec forbids gradients, which read as "template". */
   .text-gradient {
-    background: var(--gradient-gold);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: hsl(var(--accent));
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground px-8 py-4 rounded-full font-medium transition-all duration-300;
-    @apply hover:scale-105 hover:shadow-elevated;
+    @apply bg-primary text-primary-foreground px-8 py-4 rounded font-medium transition-colors duration-200;
+    @apply hover:bg-primary/90 active:bg-primary/80;
   }
 
   .btn-accent {
-    @apply px-8 py-4 rounded-full font-medium transition-all duration-300 text-white;
-    background: var(--gradient-gold);
-    @apply hover:scale-105;
-    box-shadow: var(--shadow-glow);
+    @apply px-8 py-4 rounded font-medium text-white transition-colors duration-200;
+    background: hsl(var(--accent));
+  }
+
+  .btn-accent:hover {
+    background: hsl(var(--accent-hover));
+  }
+
+  .btn-accent:active {
+    background: hsl(var(--accent-active));
   }
 
   .btn-outline {
-    @apply border-2 border-primary text-primary px-8 py-4 rounded-full font-medium transition-all duration-300;
+    @apply border border-primary text-primary px-8 py-4 rounded font-medium transition-colors duration-200;
     @apply hover:bg-primary hover:text-primary-foreground;
   }
 
@@ -179,15 +187,15 @@
   }
 
   .heading-xl {
-    @apply text-5xl md:text-7xl lg:text-8xl font-bold leading-tight tracking-tight;
+    @apply text-5xl md:text-7xl lg:text-8xl font-semibold leading-[1.05] tracking-[-0.02em];
   }
 
   .heading-lg {
-    @apply text-4xl md:text-5xl lg:text-6xl font-bold leading-tight;
+    @apply text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.1] tracking-[-0.02em];
   }
 
   .heading-md {
-    @apply text-3xl md:text-4xl font-semibold leading-snug;
+    @apply text-3xl md:text-4xl font-medium leading-snug tracking-[-0.01em];
   }
 
   .body-lg {
@@ -195,17 +203,17 @@
   }
 
   .card-hover {
-    @apply transition-all duration-500 hover:scale-[1.02] hover:shadow-elevated;
+    @apply transition-colors duration-300 hover:border-accent/40;
   }
 
   .menu-category {
-    @apply p-8 rounded-3xl bg-card border border-border transition-all duration-500;
-    @apply hover:border-accent/30 hover:shadow-lg;
+    @apply p-8 rounded bg-card border border-border transition-colors duration-300;
+    @apply hover:border-accent/40;
   }
 
   .location-card {
-    @apply p-8 rounded-3xl bg-card border border-border transition-all duration-500;
-    @apply hover:border-accent/50 hover:shadow-elevated;
+    @apply p-8 rounded bg-card border border-border transition-colors duration-300;
+    @apply hover:border-accent/40;
   }
 
   .animate-float {
