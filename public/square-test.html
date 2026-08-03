@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Square card test</title>
+    <script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 420px;
+        margin: 40px auto;
+        padding: 0 16px;
+        color: #4a3626;
+      }
+      #card-container {
+        min-height: 90px;
+        border: 1px solid #e7ddd1;
+        border-radius: 8px;
+        padding: 12px;
+        background: #fff;
+      }
+      #status {
+        margin-top: 12px;
+        font-size: 14px;
+      }
+      .err {
+        color: #b42318;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Square card test</h1>
+    <p>If fields appear below, Square works in this browser. Use values from your .env.</p>
+    <label>
+      Application ID
+      <input id="appId" style="width: 100%; margin: 6px 0 12px" />
+    </label>
+    <label>
+      Location ID
+      <input id="locationId" style="width: 100%; margin: 6px 0 12px" />
+    </label>
+    <button id="mount" type="button">Mount card</button>
+    <div id="card-container" style="margin-top: 16px"></div>
+    <div id="status">Waiting…</div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      document.getElementById("appId").value = params.get("appId") || "";
+      document.getElementById("locationId").value = params.get("locationId") || "";
+      const status = document.getElementById("status");
+
+      document.getElementById("mount").onclick = async () => {
+        status.textContent = "Mounting…";
+        status.className = "";
+        try {
+          if (!window.Square) throw new Error("Square SDK did not load");
+          const appId = document.getElementById("appId").value.trim();
+          const locationId = document.getElementById("locationId").value.trim();
+          if (!appId || !locationId) throw new Error("Enter app + location id");
+          const payments = window.Square.payments(appId, locationId);
+          const card = await payments.card();
+          document.getElementById("card-container").innerHTML = "";
+          await card.attach("#card-container");
+          status.textContent = "Card form ready — try typing a card number.";
+        } catch (e) {
+          status.className = "err";
+          status.textContent = e?.message || String(e);
+          console.error(e);
+        }
+      };
+    </script>
+  </body>
+</html>

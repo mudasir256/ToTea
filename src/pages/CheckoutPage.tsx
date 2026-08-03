@@ -18,10 +18,10 @@ import {
   fieldInputClass,
 } from "@/features/cart/components/CartCheckoutShell";
 import { SquareCardField } from "@/features/checkout/SquareCardField";
+import { placeSquareOrder } from "@/features/checkout/placeOrder";
 import { useSquareCard } from "@/features/checkout/useSquareCard";
 import { contactNumberSchema, normalizePhone } from "@/lib/validation";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { clearCheckoutIdempotencyKey, getOrCreateCheckoutIdempotencyKey } from "@/lib/checkout";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { formatMoney } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/shared/ErrorAlert";
@@ -46,25 +46,15 @@ type CartDraft = {
   promo?: string;
 };
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const STORE_ADDRESS = {
-  address_line_1: "9534 Liberia Ave",
-  address_line_2: "",
-  city: "Manassas",
-  state: "VA",
-  postal_code: "20110",
-  country: "US",
-};
-
 export default function CheckoutPage() {
   const { user, profile, refreshProfile } = useAuth();
   const { items, subtotalCents, taxCents, totalCents, clearCart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const draft = (location.state as CartDraft | null) ?? {};
-  const { ready: squareReady, error: squareError, tokenize } = useSquareCard();
+  const { ready: squareReady, error: squareError, tokenize } = useSquareCard(
+    "square-card-container-checkout",
+  );
 
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -96,120 +86,40 @@ export default function CheckoutPage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
-    if (items.length === 0) {
-      setFormError("Your cart is empty.");
-      return;
-    }
-    if (items.some((i) => i.stock_quantity < i.quantity)) {
-      setFormError("One or more items are out of stock. Update your cart and try again.");
-      return;
-    }
-
-    const fullName = `${values.first_name} ${values.last_name}`.trim();
     const contact = normalizePhone(values.contact_number || "");
     if (!contact) {
       setFormError("A contact number is required.");
       return;
     }
-
     if (!isSupabaseConfigured) {
       setFormError("Checkout requires Supabase configuration.");
       return;
     }
-
     if (!squareReady) {
       setFormError(squareError || "Payment form is not ready yet.");
       return;
     }
 
-    const checkoutItems = items.map((item) => ({
-      menuItemId: item.product_id,
-      quantity: item.quantity,
-      size: item.selected_options.size,
-      toppingIds: (item.selected_options.toppings ?? []).map((topping) => topping.id),
-      sweetness: item.selected_options.sweetness,
-      ice: item.selected_options.ice,
-      milk: item.selected_options.milk,
-    }));
-
-    if (checkoutItems.some((item) => !UUID_PATTERN.test(item.menuItemId))) {
-      setFormError(
-        "One or more cart items came from the old menu. Remove them and add them again.",
-      );
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const tokenResult = await tokenize({
-        amount: (totalCents / 100).toFixed(2),
-        currencyCode: "USD",
-        intent: "CHARGE",
-        customerInitiated: true,
-        sellerKeyedIn: false,
-        billingContact: {
-          givenName: values.first_name,
-          familyName: values.last_name,
-          email: values.email,
-          phone: contact,
-          addressLines: [STORE_ADDRESS.address_line_1],
-          city: STORE_ADDRESS.city,
-          state: STORE_ADDRESS.state,
-          postalCode: STORE_ADDRESS.postal_code,
-          countryCode: "US",
-        },
+      const orderId = await placeSquareOrder({
+        items,
+        totalCents,
+        firstName: values.first_name,
+        lastName: values.last_name,
+        email: values.email,
+        contactNumber: contact,
+        tokenize,
+        saveContact: !profile?.contact_number,
+        marketingOptIn,
+        orderType,
+        promoCode: promo,
       });
-
-      if (tokenResult.status !== "OK" || !tokenResult.token) {
-        const message =
-          tokenResult.errors?.map((e) => e.message).join(", ") || "Card tokenization failed";
-        throw new Error(message);
-      }
-
-      const idempotencyKey = getOrCreateCheckoutIdempotencyKey();
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase is not configured");
-
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          idempotencyKey,
-          sourceId: tokenResult.token,
-          customerName: fullName,
-          customerEmail: values.email,
-          contactNumber: contact,
-          items: checkoutItems,
-          shippingAddress: STORE_ADDRESS,
-          saveContact: !profile?.contact_number,
-          marketingOptIn,
-          orderType,
-          promoCode: promo || undefined,
-        },
-      });
-
-      if (error) {
-        let message = error.message;
-        const response = (error as { context?: Response }).context;
-        if (response) {
-          try {
-            const payload = (await response.clone().json()) as { error?: string };
-            if (payload.error) message = payload.error;
-          } catch {
-            // keep client error
-          }
-        }
-        throw new Error(message);
-      }
-      if (data?.error) throw new Error(data.error);
-      const orderId = data?.orderId ?? data?.order?.id;
-      if (!orderId) throw new Error("Checkout did not return an order id");
-
-      clearCheckoutIdempotencyKey();
       await refreshProfile();
       await clearCart();
       toast.success("Order placed successfully");
       navigate(`/order-confirmation/${orderId}`);
     } catch (error) {
-      clearCheckoutIdempotencyKey();
       const message = error instanceof Error ? error.message : "Checkout failed";
       setFormError(message);
       toast.error(message);
@@ -347,7 +257,11 @@ export default function CheckoutPage() {
               <p className="mb-3 text-[11.5px] text-muted-foreground">
                 Secure checkout powered by Square — your card details never touch our servers.
               </p>
-              <SquareCardField ready={squareReady} error={squareError} />
+              <SquareCardField
+                containerId="square-card-container-checkout"
+                ready={squareReady}
+                error={squareError}
+              />
             </section>
           </div>
 

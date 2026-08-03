@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { useCart } from "@/features/cart/CartProvider";
 import {
   AccountPromoCard,
@@ -9,13 +12,25 @@ import {
   OrderTypePills,
   fieldInputClass,
 } from "@/features/cart/components/CartCheckoutShell";
+import { SquareCardField } from "@/features/checkout/SquareCardField";
+import { placeSquareOrder } from "@/features/checkout/placeOrder";
+import { useSquareCard } from "@/features/checkout/useSquareCard";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorAlert } from "@/components/shared/ErrorAlert";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { normalizePhone } from "@/lib/validation";
 
 export default function CartPage() {
-  const { items, loading, subtotalCents, taxCents, totalCents } = useCart();
+  const { user, profile, refreshProfile } = useAuth();
+  const { items, loading, subtotalCents, taxCents, totalCents, clearCart } = useCart();
+  const navigate = useNavigate();
+  const { ready: squareReady, error: squareError, tokenize } = useSquareCard(
+    "square-card-container-cart",
+  );
+
   const [orderType, setOrderType] = useState<"asap" | "later">("asap");
   const [accountMode, setAccountMode] = useState<"guest" | "account">("guest");
   const [promo, setPromo] = useState("");
@@ -24,6 +39,8 @@ export default function CartPage() {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   if (loading) {
     return (
@@ -55,6 +72,64 @@ export default function CartPage() {
     );
   }
 
+  const onPlaceOrder = async () => {
+    setFormError(null);
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setFormError("Enter your first and last name.");
+      return;
+    }
+    const contact = normalizePhone(phone);
+    if (!contact) {
+      setFormError("A valid contact number is required.");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      setFormError("Enter a valid email.");
+      return;
+    }
+    if (!isSupabaseConfigured) {
+      setFormError("Checkout requires Supabase configuration.");
+      return;
+    }
+    if (!user) {
+      toast.message("Sign in to complete payment");
+      navigate("/login", { state: { from: "/cart" } });
+      return;
+    }
+    if (!squareReady) {
+      setFormError(squareError || "Payment form is not ready yet.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const orderId = await placeSquareOrder({
+        items,
+        totalCents,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        contactNumber: contact,
+        tokenize,
+        saveContact: !profile?.contact_number,
+        marketingOptIn,
+        orderType,
+        promoCode: promo,
+      });
+      await refreshProfile();
+      await clearCart();
+      toast.success("Order placed successfully");
+      navigate(`/order-confirmation/${orderId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Checkout failed";
+      setFormError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <CartCheckoutHeader step="payment" />
@@ -81,6 +156,7 @@ export default function CartPage() {
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="Jane"
                     className={fieldInputClass}
+                    autoComplete="given-name"
                   />
                 </Field>
                 <Field id="last_name" label="Last name">
@@ -90,6 +166,7 @@ export default function CartPage() {
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Doe"
                     className={fieldInputClass}
+                    autoComplete="family-name"
                   />
                 </Field>
                 <Field id="phone" label="Phone number">
@@ -100,6 +177,7 @@ export default function CartPage() {
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="(555) 123-4567"
                     className={fieldInputClass}
+                    autoComplete="tel"
                   />
                 </Field>
                 <Field id="email" label="Email">
@@ -110,6 +188,7 @@ export default function CartPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@email.com"
                     className={fieldInputClass}
+                    autoComplete="email"
                   />
                 </Field>
               </div>
@@ -138,14 +217,19 @@ export default function CartPage() {
                 Payment
               </h2>
               <p className="mb-3 text-[11.5px] text-muted-foreground">
-                Secure checkout powered by Square — your card details never touch our servers.
+                Enter your card below. Card details are secured by Square and never touch our
+                servers.
               </p>
-              <div className="rounded-lg border border-border bg-white px-3.5 py-3.5 text-[13px] text-muted-foreground">
-                💳 Card number, expiry, CVV — enter your card on the next step to pay securely
-              </div>
-              <p className="mt-2.5 text-[11px] text-muted-foreground">
-                🔒 Payments processed securely by Square
-              </p>
+              <SquareCardField
+                containerId="square-card-container-cart"
+                ready={squareReady}
+                error={squareError}
+              />
+              {formError ? (
+                <div className="mt-3">
+                  <ErrorAlert title="Checkout" message={formError} />
+                </div>
+              ) : null}
             </section>
           </div>
 
@@ -157,21 +241,15 @@ export default function CartPage() {
             promo={promo}
             onPromoChange={setPromo}
             action={
-              <Link
-                to="/checkout"
-                state={{
-                  orderType,
-                  firstName,
-                  lastName,
-                  phone,
-                  email,
-                  marketingOptIn,
-                  promo,
-                }}
-                className="block w-full rounded-lg bg-accent py-[15px] text-center text-[14.5px] font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-active"
+              <button
+                type="button"
+                onClick={() => void onPlaceOrder()}
+                disabled={submitting || !squareReady}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent py-[15px] text-[14.5px] font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-active disabled:cursor-not-allowed disabled:opacity-45"
               >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Place order · {formatMoney(totalCents)}
-              </Link>
+              </button>
             }
           />
         </div>

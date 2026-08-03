@@ -10,15 +10,17 @@ type SquareCard = {
   destroy?: () => Promise<void>;
 };
 
+type SquarePayments = {
+  card: () => Promise<SquareCard>;
+};
+
 declare global {
   interface Window {
     Square?: {
       payments: (
         applicationId: string,
         locationId: string,
-      ) => Promise<{
-        card: () => Promise<SquareCard>;
-      }>;
+      ) => SquarePayments | Promise<SquarePayments>;
     };
   }
 }
@@ -29,16 +31,26 @@ function loadSquareSdk(environment: string): Promise<void> {
       resolve();
       return;
     }
-    const existing = document.querySelector<HTMLScriptElement>("script[data-square-sdk]");
+
+    const existing = document.querySelector<HTMLScriptElement>("script[data-square-sdk], script[src*='square.js']");
     if (existing) {
+      if (window.Square) {
+        resolve();
+        return;
+      }
       existing.addEventListener("load", () => resolve(), { once: true });
       existing.addEventListener(
         "error",
         () => reject(new Error("Failed to load Square Web Payments SDK")),
         { once: true },
       );
+      // Script may already be loaded but Square global not yet visible.
+      setTimeout(() => {
+        if (window.Square) resolve();
+      }, 0);
       return;
     }
+
     const script = document.createElement("script");
     script.dataset.squareSdk = "true";
     script.src =
@@ -48,16 +60,41 @@ function loadSquareSdk(environment: string): Promise<void> {
     script.async = true;
     script.onload = () => resolve();
     script.onerror = () => reject(new Error("Failed to load Square Web Payments SDK"));
-    document.body.appendChild(script);
+    document.head.appendChild(script);
   });
+}
+
+async function waitForContainer(containerId: string, attempts = 40): Promise<HTMLElement | null> {
+  for (let i = 0; i < attempts; i += 1) {
+    const el = document.getElementById(containerId);
+    if (el) return el;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return null;
+}
+
+function formatSquareError(err: unknown): string {
+  if (!err) return "Unable to initialize Square payment form.";
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null) {
+    const maybe = err as { message?: string; detail?: string; errors?: Array<{ detail?: string; message?: string }> };
+    if (maybe.errors?.length) {
+      return maybe.errors.map((e) => e.detail || e.message).filter(Boolean).join(", ");
+    }
+    if (maybe.message) return maybe.message;
+    if (maybe.detail) return maybe.detail;
+  }
+  return String(err);
 }
 
 export function useSquareCard(containerId = "square-card-container") {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cardRef = useRef<SquareCard | null>(null);
+  const initIdRef = useRef(0);
 
   useEffect(() => {
+    const initId = ++initIdRef.current;
     let cancelled = false;
     const appId = (import.meta.env.VITE_SQUARE_APPLICATION_ID as string | undefined)?.trim();
     const locationId = (import.meta.env.VITE_SQUARE_LOCATION_ID as string | undefined)?.trim();
@@ -69,42 +106,43 @@ export function useSquareCard(containerId = "square-card-container") {
       setError(null);
 
       if (!appId || !locationId || appId.includes("xxxxxxxx")) {
-        setError("Square application ID / location ID is not configured.");
+        setError("Square application ID / location ID is not configured in .env");
         return;
       }
 
-      // Wait a tick so the container is in the DOM after route paint.
-      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
-      if (cancelled) return;
-
-      const container = document.getElementById(containerId);
+      const container = await waitForContainer(containerId);
+      if (cancelled || initId !== initIdRef.current) return;
       if (!container) {
-        setError("Payment form container is missing.");
+        setError("Payment form container is missing from the page.");
         return;
       }
+
       container.innerHTML = "";
 
       try {
         await loadSquareSdk(environment);
-        if (cancelled || !window.Square) return;
+        if (cancelled || initId !== initIdRef.current) return;
+        if (!window.Square) {
+          setError("Square SDK loaded but window.Square is unavailable.");
+          return;
+        }
 
-        const payments = await window.Square.payments(appId, locationId);
+        const payments = await Promise.resolve(window.Square.payments(appId, locationId));
+        if (cancelled || initId !== initIdRef.current) return;
+
         const card = await payments.card();
-        await card.attach(`#${containerId}`);
-        if (cancelled) {
+        await card.attach(`#${CSS.escape(containerId)}`);
+        if (cancelled || initId !== initIdRef.current) {
           await card.destroy?.();
           return;
         }
+
         cardRef.current = card;
         setReady(true);
       } catch (err) {
-        console.error(err);
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to initialize Square payment form.",
-          );
+        console.error("[Square card init]", err);
+        if (!cancelled && initId === initIdRef.current) {
+          setError(formatSquareError(err));
           setReady(false);
         }
       }
@@ -114,8 +152,9 @@ export function useSquareCard(containerId = "square-card-container") {
 
     return () => {
       cancelled = true;
-      void cardRef.current?.destroy?.();
+      const card = cardRef.current;
       cardRef.current = null;
+      void card?.destroy?.().catch(() => undefined);
     };
   }, [containerId]);
 
