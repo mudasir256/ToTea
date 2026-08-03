@@ -39,7 +39,8 @@
     --input: 33 31% 86%;
     --ring: 31 59% 45%;
 
-    --radius: 1.75rem;
+    /* Spec: small radius (~4px) on buttons; cards use larger radii in components */
+    --radius: 0.25rem;
 
     /* Custom tokens */
     --glass: 0 0% 100% / 0.7;
@@ -160,8 +161,16 @@
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground px-8 py-4 rounded font-medium transition-colors duration-200;
-    @apply hover:bg-primary/90 active:bg-primary/80;
+    @apply px-[22px] py-3 rounded text-[13.5px] font-semibold text-white transition-colors duration-200;
+    background: hsl(var(--accent));
+  }
+
+  .btn-primary:hover {
+    background: hsl(var(--accent-hover));
+  }
+
+  .btn-primary:active {
+    background: hsl(var(--accent-active));
   }
 
   .btn-accent {

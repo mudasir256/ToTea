@@ -58,7 +58,7 @@ export const HappyHour = () => {
                 transition={{ duration: 0.6, delay: 0.4 }}
               >
                 <ScrollLink 
-                  to="/order" 
+                  to="/menu" 
                   className="btn-accent inline-flex items-center gap-2 group"
                 >
                   <span>Order Now</span>

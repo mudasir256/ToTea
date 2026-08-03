@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { CartProvider } from "@/features/cart/CartProvider";
@@ -12,7 +12,7 @@ import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 const Home = lazy(() => import("./pages/Home"));
 const MenuPage = lazy(() => import("./pages/MenuPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
-const OrderPage = lazy(() => import("./pages/OrderPage"));
+const LocationsPage = lazy(() => import("./pages/LocationsPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -52,7 +52,8 @@ const App = () => (
                 <Route path="/menu" element={<MenuPage />} />
                 <Route path="/product/:productName" element={<ProductDetailPage />} />
                 <Route path="/about" element={<AboutPage />} />
-                <Route path="/order" element={<OrderPage />} />
+                <Route path="/locations" element={<LocationsPage />} />
+                <Route path="/order" element={<Navigate to="/menu" replace />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/login" element={<LoginPage />} />

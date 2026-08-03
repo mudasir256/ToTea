@@ -23,31 +23,46 @@ export type CartToppingSelection = {
   price_cents: number;
 };
 
+export type CartDrinkOptions = {
+  size: string;
+  sweetness?: string;
+  ice?: string;
+  milk?: string;
+  toppings?: CartToppingSelection[];
+};
+
 export type LocalCartItem = {
   id: string;
   product_id: string;
   product_variant_id: string;
   product_name: string;
   product_image: string | null;
-  selected_options: { size: string; toppings?: CartToppingSelection[] };
+  selected_options: CartDrinkOptions;
   quantity: number;
   unit_price_cents: number;
   stock_quantity: number;
 };
 
-/** Stable cart line key so same size + same toppings merge, different toppings do not. */
+/** Stable cart line key so same size + same customizations merge. */
 export function buildCartVariantId(
   productId: string,
   sizeLabel: string,
   toppings: CartToppingSelection[] = [],
+  extras: { sweetness?: string; ice?: string; milk?: string } = {},
 ): string {
   const sizeKey = sizeLabel.toLowerCase();
-  if (toppings.length === 0) return `${productId}:${sizeKey}`;
-  const toppingKey = [...toppings]
-    .map((topping) => topping.id)
-    .sort()
-    .join(",");
-  return `${productId}:${sizeKey}:toppings:${toppingKey}`;
+  const parts = [`${productId}:${sizeKey}`];
+  if (extras.sweetness) parts.push(`sweet:${extras.sweetness.toLowerCase()}`);
+  if (extras.ice) parts.push(`ice:${extras.ice.toLowerCase()}`);
+  if (extras.milk) parts.push(`milk:${extras.milk.toLowerCase()}`);
+  if (toppings.length > 0) {
+    const toppingKey = [...toppings]
+      .map((topping) => topping.id)
+      .sort()
+      .join(",");
+    parts.push(`toppings:${toppingKey}`);
+  }
+  return parts.join(":");
 }
 
 type CartContextValue = {

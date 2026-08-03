@@ -1,10 +1,15 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import {
-  isValidUuid,
-  parsePositiveInt,
-  sanitizeClientError,
-} from "../_shared/security.ts";
+
+type CheckoutItem = {
+  menuItemId: string;
+  quantity: number;
+  size: string;
+  toppingIds?: string[];
+  sweetness?: string;
+  ice?: string;
+  milk?: string;
+};
 
 type CheckoutBody = {
   idempotencyKey: string;
@@ -12,6 +17,7 @@ type CheckoutBody = {
   customerName: string;
   customerEmail?: string;
   contactNumber: string;
+  items: CheckoutItem[];
   shippingAddress: {
     address_line_1: string;
     address_line_2?: string;
@@ -22,6 +28,9 @@ type CheckoutBody = {
   };
   saveContact?: boolean;
 };
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const allowed = (Deno.env.get("ALLOWED_ORIGINS") || "")
@@ -46,7 +55,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 function json(
   status: number,
   body: Record<string, unknown>,
-  corsHeaders: Record<string, string>
+  corsHeaders: Record<string, string>,
 ) {
   return new Response(JSON.stringify(body), {
     status,
@@ -60,59 +69,8 @@ function squareBaseUrl() {
     : "https://connect.squareupsandbox.com";
 }
 
-function validateCheckoutBody(body: CheckoutBody): string | null {
-  if (!body?.idempotencyKey || !isValidUuid(body.idempotencyKey)) {
-    return "A valid checkout idempotency key is required.";
-  }
-  if (!body?.sourceId || typeof body.sourceId !== "string" || body.sourceId.length > 512) {
-    return "Invalid payment token.";
-  }
-  if (!body.shippingAddress || typeof body.shippingAddress !== "object") {
-    return "Shipping address is required.";
-  }
-
-  const addr = body.shippingAddress;
-  const requiredFields: Array<[string, string | undefined, number]> = [
-    ["address line 1", addr.address_line_1, 200],
-    ["city", addr.city, 100],
-    ["state", addr.state, 100],
-    ["postal code", addr.postal_code, 20],
-    ["country", addr.country, 100],
-  ];
-
-  for (const [label, value, max] of requiredFields) {
-    if (!value || typeof value !== "string" || value.trim().length < 2 || value.length > max) {
-      return `A valid ${label} is required.`;
-    }
-  }
-
-  if (addr.address_line_2 && addr.address_line_2.length > 200) {
-    return "Address line 2 is too long.";
-  }
-
-  if (!body.customerName?.trim() || body.customerName.trim().length > 200) {
-    return "Customer name is required.";
-  }
-
-  const contact = body.contactNumber?.trim();
-  if (!contact || contact.length < 7 || contact.length > 32) {
-    return "A valid contact number is required.";
-  }
-
-  return null;
-}
-
-async function updateAttempt(
-  admin: ReturnType<typeof createClient>,
-  userId: string,
-  idempotencyKey: string,
-  patch: Record<string, unknown>
-) {
-  await admin
-    .from("checkout_attempts")
-    .update(patch)
-    .eq("user_id", userId)
-    .eq("idempotency_key", idempotencyKey);
+function dollarsFromCents(cents: number) {
+  return Math.round(cents) / 100;
 }
 
 serve(async (req) => {
@@ -132,11 +90,7 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const squareToken = Deno.env.get("SQUARE_ACCESS_TOKEN");
     const locationId = Deno.env.get("SQUARE_LOCATION_ID");
-    const shippingAmount = parsePositiveInt(
-      Deno.env.get("SHIPPING_AMOUNT_CENTS"),
-      0
-    );
-    const taxRateBps = parsePositiveInt(Deno.env.get("TAX_RATE_BPS"), 0);
+    const taxRateBps = Number(Deno.env.get("TAX_RATE_BPS") || "0");
 
     if (!squareToken || !locationId) {
       return json(500, { error: "Checkout is temporarily unavailable." }, corsHeaders);
@@ -157,128 +111,275 @@ serve(async (req) => {
       error: userError,
     } = await userClient.auth.getUser();
     if (userError || !user) {
-      return json(401, { error: "Invalid session." }, corsHeaders);
+      return json(401, { error: "Invalid session. Please sign in again." }, corsHeaders);
     }
 
     const body = (await req.json()) as CheckoutBody;
-    const validationError = validateCheckoutBody(body);
-    if (validationError) {
-      return json(400, { error: validationError }, corsHeaders);
+
+    if (!body?.idempotencyKey || !UUID_RE.test(body.idempotencyKey)) {
+      return json(400, { error: "A valid checkout idempotency key is required." }, corsHeaders);
+    }
+    if (!body?.sourceId || typeof body.sourceId !== "string") {
+      return json(400, { error: "Invalid payment token." }, corsHeaders);
+    }
+    if (!body.customerName?.trim()) {
+      return json(400, { error: "Customer name is required." }, corsHeaders);
+    }
+    const contact = body.contactNumber?.trim();
+    if (!contact || contact.length < 7) {
+      return json(400, { error: "A valid contact number is required." }, corsHeaders);
+    }
+    if (!Array.isArray(body.items) || body.items.length === 0) {
+      return json(400, { error: "Your cart is empty." }, corsHeaders);
+    }
+    if (!body.shippingAddress?.address_line_1 || !body.shippingAddress?.city) {
+      return json(400, { error: "Pickup / shipping address is required." }, corsHeaders);
     }
 
-    const customerEmail = (user.email || "").trim().toLowerCase();
-    if (!customerEmail) {
-      return json(400, { error: "Your account must have a verified email." }, corsHeaders);
-    }
-
-    const { data: existingAttempt } = await admin
-      .from("checkout_attempts")
-      .select("order_id, status, user_id")
-      .eq("user_id", user.id)
+    // Idempotent replay
+    const { data: existingOrder } = await admin
+      .from("orders")
+      .select("id")
       .eq("idempotency_key", body.idempotencyKey)
       .maybeSingle();
-
-    if (existingAttempt?.order_id) {
-      return json(200, { orderId: existingAttempt.order_id, reused: true }, corsHeaders);
+    if (existingOrder?.id) {
+      return json(200, { orderId: existingOrder.id, reused: true }, corsHeaders);
     }
 
-    await admin.from("checkout_attempts").upsert(
-      {
-        user_id: user.id,
-        idempotency_key: body.idempotencyKey,
-        status: "started",
-        request_payload: {
-          customerName: body.customerName.trim(),
-          customerEmail,
-          contactNumber: body.contactNumber.trim(),
-          shippingAddress: body.shippingAddress,
-        },
-      },
-      { onConflict: "user_id,idempotency_key" }
-    );
+    const customerEmail = (
+      body.customerEmail ||
+      user.email ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+    if (!customerEmail) {
+      return json(400, { error: "A valid email is required." }, corsHeaders);
+    }
 
-    const { data: priced, error: priceError } = await admin.rpc("lock_and_price_cart", {
-      p_user_id: user.id,
-    });
-    if (priceError) {
-      await updateAttempt(admin, user.id, body.idempotencyKey, {
-        status: "failed",
-        error_message: priceError.message,
-      });
+    // Authoritative pricing from menu tables
+    const menuItemIds = [...new Set(body.items.map((item) => item.menuItemId))];
+    if (menuItemIds.some((id) => !UUID_RE.test(id))) {
+      return json(400, { error: "One or more cart items are invalid." }, corsHeaders);
+    }
+
+    const { data: menuItems, error: menuError } = await admin
+      .from("menu_items")
+      .select("id, name, image_url, is_available, menu_item_variants(id, size, price)")
+      .in("id", menuItemIds)
+      .eq("is_available", true);
+
+    if (menuError || !menuItems?.length) {
+      return json(400, { error: "Unable to load menu items for checkout." }, corsHeaders);
+    }
+
+    const allToppingIds = [
+      ...new Set(body.items.flatMap((item) => item.toppingIds ?? [])),
+    ];
+    let toppingsById = new Map<
+      string,
+      { id: string; name: string; category: string; price: number }
+    >();
+    if (allToppingIds.length > 0) {
+      const { data: toppings, error: toppingError } = await admin
+        .from("menu_toppings")
+        .select("id, name, category, price, is_available")
+        .in("id", allToppingIds)
+        .eq("is_available", true);
+      if (toppingError) {
+        return json(400, { error: "Unable to load toppings for checkout." }, corsHeaders);
+      }
+      toppingsById = new Map((toppings ?? []).map((t) => [t.id, t]));
+    }
+
+    const { data: stockRows, error: stockError } = await admin.rpc(
+      "get_public_menu_stock",
+      { p_menu_item_id: null },
+    );
+    if (stockError) {
+      console.error("stock lookup failed", stockError);
       return json(
-        400,
-        {
-          error: sanitizeClientError(
-            "Unable to process your cart. Please review your items and try again.",
-            priceError.message
-          ),
-        },
-        corsHeaders
+        503,
+        { error: "Unable to confirm stock right now. Please try again shortly." },
+        corsHeaders,
       );
     }
+    const stock = (stockRows ?? []) as Array<{
+      menu_item_id: string;
+      size: string;
+      available_quantity: number;
+    }>;
 
-    const subtotal = Number(priced.subtotal_cents || 0);
-    const discount = 0;
-    const tax = Math.round(Math.max(0, subtotal - discount) * (taxRateBps / 10000));
-    const items = priced.items as Array<Record<string, unknown>>;
+    const pricedItems: Array<{
+      menu_item_id: string;
+      name: string;
+      image_url: string;
+      size: string;
+      sweetness?: string;
+      ice?: string;
+      milk?: string;
+      base_price: number;
+      toppings: Array<{ id: string; name: string; category: string; price: number }>;
+      topping_total: number;
+      quantity: number;
+      unit_price: number;
+      line_total: number;
+      unit_price_cents: number;
+      line_total_cents: number;
+    }> = [];
+
+    let subtotalCents = 0;
+
+    for (const line of body.items) {
+      const qty = Math.floor(Number(line.quantity));
+      if (!Number.isFinite(qty) || qty < 1 || qty > 25) {
+        return json(400, { error: "Invalid item quantity." }, corsHeaders);
+      }
+
+      const menuItem = menuItems.find((item) => item.id === line.menuItemId);
+      if (!menuItem) {
+        return json(400, { error: "An item in your cart is no longer available." }, corsHeaders);
+      }
+
+      const variants = (menuItem.menu_item_variants ?? []) as Array<{
+        id: string;
+        size: string;
+        price: number;
+      }>;
+      const variant = variants.find(
+        (entry) => entry.size.trim().toLowerCase() === String(line.size).trim().toLowerCase(),
+      );
+      if (!variant) {
+        return json(
+          400,
+          { error: `Size "${line.size}" is unavailable for ${menuItem.name}.` },
+          corsHeaders,
+        );
+      }
+
+      const available =
+        stock.find(
+          (entry) =>
+            entry.menu_item_id === menuItem.id &&
+            entry.size.trim().toLowerCase() === variant.size.trim().toLowerCase(),
+        )?.available_quantity ?? 0;
+
+      if (available < qty) {
+        return json(
+          400,
+          { error: `Insufficient stock for ${menuItem.name} (${variant.size}).` },
+          corsHeaders,
+        );
+      }
+
+      const selectedToppings = (line.toppingIds ?? [])
+        .map((id) => toppingsById.get(id))
+        .filter(Boolean) as Array<{
+        id: string;
+        name: string;
+        category: string;
+        price: number;
+      }>;
+
+      // Match storefront: milk tea / brown sugar drinks include 1 free standard topping.
+      const includesFreeTopping =
+        /milk\s*tea|boba\s*milk|brown\s*sugar/i.test(menuItem.name);
+      let freeStandardApplied = false;
+      const pricedToppings = selectedToppings.map((topping) => {
+        const isStandard = String(topping.category).toLowerCase() === "standard";
+        if (includesFreeTopping && isStandard && !freeStandardApplied) {
+          freeStandardApplied = true;
+          return { ...topping, price: 0 };
+        }
+        return topping;
+      });
+
+      const baseCents = Math.round(Number(variant.price) * 100);
+      const toppingCents = pricedToppings.reduce(
+        (sum, topping) => sum + Math.round(Number(topping.price) * 100),
+        0,
+      );
+      const unitCents = baseCents + toppingCents;
+      const lineCents = unitCents * qty;
+      subtotalCents += lineCents;
+
+      pricedItems.push({
+        menu_item_id: menuItem.id,
+        name: menuItem.name,
+        image_url: menuItem.image_url,
+        size: variant.size,
+        sweetness: line.sweetness?.trim() || undefined,
+        ice: line.ice?.trim() || undefined,
+        milk: line.milk?.trim() || undefined,
+        base_price: dollarsFromCents(baseCents),
+        toppings: pricedToppings.map((topping) => ({
+          id: topping.id,
+          name: topping.name,
+          category: topping.category,
+          price: Number(topping.price),
+        })),
+        topping_total: dollarsFromCents(toppingCents),
+        quantity: qty,
+        unit_price: dollarsFromCents(unitCents),
+        line_total: dollarsFromCents(lineCents),
+        unit_price_cents: unitCents,
+        line_total_cents: lineCents,
+      });
+    }
+
+    const taxCents = Math.round(
+      Math.max(0, subtotalCents) * (Number.isFinite(taxRateBps) ? taxRateBps / 10000 : 0),
+    );
+    const totalCents = subtotalCents + taxCents;
+
+    if (totalCents < 1) {
+      return json(400, { error: "Order total is invalid." }, corsHeaders);
+    }
 
     const squareOrderPayload = {
       idempotency_key: `${body.idempotencyKey}-order`,
       order: {
         location_id: locationId,
         reference_id: body.idempotencyKey.slice(0, 40),
-        line_items: items.map((item) => ({
-          name: String(item.product_name),
+        line_items: pricedItems.map((item) => ({
+          name: item.name,
           quantity: String(item.quantity),
           base_price_money: {
-            amount: Number(item.unit_price_cents),
+            amount: item.unit_price_cents,
             currency: "USD",
           },
-          note: `Size: ${String((item.selected_options as { size?: string })?.size || "")}`,
+          note: [
+            item.size,
+            item.sweetness ? `Sweet ${item.sweetness}` : null,
+            item.ice,
+            item.milk,
+            ...item.toppings.map((topping) => topping.name),
+          ]
+            .filter(Boolean)
+            .join(" · "),
         })),
-        // Fixed-amount service charges avoid percentage tax rounding mismatches with CreatePayment.
-        ...(tax > 0 || shippingAmount > 0
+        ...(taxCents > 0
           ? {
               service_charges: [
-                ...(tax > 0
-                  ? [
-                      {
-                        name: "Sales Tax",
-                        amount_money: { amount: tax, currency: "USD" },
-                        calculation_phase: "TOTAL_PHASE",
-                      },
-                    ]
-                  : []),
-                ...(shippingAmount > 0
-                  ? [
-                      {
-                        name: "Shipping",
-                        amount_money: { amount: shippingAmount, currency: "USD" },
-                        calculation_phase: "TOTAL_PHASE",
-                      },
-                    ]
-                  : []),
+                {
+                  name: "Sales Tax",
+                  amount_money: { amount: taxCents, currency: "USD" },
+                  calculation_phase: "TOTAL_PHASE",
+                },
               ],
             }
           : {}),
         fulfillments: [
           {
-            type: "SHIPMENT",
+            type: "PICKUP",
             state: "PROPOSED",
-            shipment_details: {
+            pickup_details: {
               recipient: {
                 display_name: body.customerName.trim(),
                 email_address: customerEmail,
-                phone_number: body.contactNumber.trim(),
-                address: {
-                  address_line_1: body.shippingAddress.address_line_1.trim(),
-                  address_line_2: body.shippingAddress.address_line_2?.trim() || undefined,
-                  locality: body.shippingAddress.city.trim(),
-                  administrative_district_level_1: body.shippingAddress.state.trim(),
-                  postal_code: body.shippingAddress.postal_code.trim(),
-                  country: body.shippingAddress.country.trim() || "US",
-                },
+                phone_number: contact,
               },
+              schedule_type: "ASAP",
             },
           },
         ],
@@ -296,11 +397,7 @@ serve(async (req) => {
     });
     const orderJson = await orderRes.json();
     if (!orderRes.ok) {
-      await updateAttempt(admin, user.id, body.idempotencyKey, {
-        status: "failed",
-        error_message: "Square order creation failed",
-        response_payload: orderJson,
-      });
+      console.error("Square order failed", orderJson);
       return json(400, { error: "Unable to create your order. Please try again." }, corsHeaders);
     }
 
@@ -309,9 +406,6 @@ serve(async (req) => {
     if (!squareOrderId || !Number.isFinite(squareOrderTotal)) {
       return json(400, { error: "Payment provider returned an invalid order." }, corsHeaders);
     }
-
-    // Charge exactly what Square calculated for the order (required when order_id is set).
-    const chargeAmount = squareOrderTotal;
 
     const paymentRes = await fetch(`${squareBaseUrl()}/v2/payments`, {
       method: "POST",
@@ -323,7 +417,7 @@ serve(async (req) => {
       body: JSON.stringify({
         idempotency_key: `${body.idempotencyKey}-payment`,
         source_id: body.sourceId,
-        amount_money: { amount: chargeAmount, currency: "USD" },
+        amount_money: { amount: squareOrderTotal, currency: "USD" },
         location_id: locationId,
         order_id: squareOrderId,
         autocomplete: true,
@@ -332,91 +426,105 @@ serve(async (req) => {
     });
     const paymentJson = await paymentRes.json();
     if (!paymentRes.ok) {
-      const squareDetail =
-        paymentJson?.errors?.[0]?.detail ||
-        paymentJson?.errors?.[0]?.code ||
-        "Square payment failed";
-      console.error("Square payment failed:", paymentJson);
-      await updateAttempt(admin, user.id, body.idempotencyKey, {
-        status: "failed",
-        error_message: String(squareDetail),
-        response_payload: paymentJson,
-      });
+      console.error("Square payment failed", paymentJson);
       return json(
         400,
         {
           error: "Payment was declined. Please check your card and try again.",
           squareCode: paymentJson?.errors?.[0]?.code || null,
         },
-        corsHeaders
+        corsHeaders,
       );
     }
 
     const payment = paymentJson.payment;
     const squarePaymentId = payment?.id as string | undefined;
     const paymentStatus = payment?.status as string | undefined;
-    const chargedAmount = payment?.amount_money?.amount as number | undefined;
-
     if (!squarePaymentId || paymentStatus !== "COMPLETED") {
-      await updateAttempt(admin, user.id, body.idempotencyKey, {
-        status: "failed",
-        error_message: `Unexpected payment status: ${paymentStatus || "unknown"}`,
-        response_payload: paymentJson,
-      });
       return json(400, { error: "Payment could not be completed. Please try again." }, corsHeaders);
     }
 
-    if (chargedAmount !== chargeAmount) {
-      await updateAttempt(admin, user.id, body.idempotencyKey, {
-        status: "failed",
-        error_message: "Charged amount mismatch",
-        response_payload: paymentJson,
-      });
-      return json(400, { error: "Payment amount mismatch. Please contact support." }, corsHeaders);
-    }
+    const orderNumber = `TO-${Date.now().toString(36).toUpperCase()}`;
+    const orderPayload = {
+      order_number: orderNumber,
+      user_id: user.id,
+      customer_details: {
+        name: body.customerName.trim(),
+        email: customerEmail,
+        contact_number: contact,
+      },
+      items: pricedItems.map((item) => ({
+        menu_item_id: item.menu_item_id,
+        name: item.name,
+        image_url: item.image_url,
+        size: item.size,
+        base_price: item.base_price,
+        toppings: item.toppings,
+        topping_total: item.topping_total,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        line_total: item.line_total,
+      })),
+      shipping_address: {
+        address_line_1: body.shippingAddress.address_line_1.trim(),
+        address_line_2: body.shippingAddress.address_line_2?.trim() || "",
+        city: body.shippingAddress.city.trim(),
+        state: body.shippingAddress.state.trim(),
+        postal_code: body.shippingAddress.postal_code.trim(),
+        country: body.shippingAddress.country.trim() || "US",
+      },
+      total: dollarsFromCents(squareOrderTotal),
+      order_status: "confirmed",
+      payment_status: "paid",
+      payment_method: "square_card",
+      square_order_id: squareOrderId,
+      square_payment_id: squarePaymentId,
+      idempotency_key: body.idempotencyKey,
+    };
 
-    const { data: orderId, error: finalizeError } = await admin.rpc("finalize_paid_order", {
-      p_user_id: user.id,
-      p_idempotency_key: body.idempotencyKey,
-      p_customer_name: body.customerName.trim(),
-      p_customer_email: customerEmail,
-      p_contact_number: body.contactNumber.trim(),
-      p_shipping_address: body.shippingAddress,
-      p_payment_method: "square_card",
-      p_square_order_id: squareOrderId,
-      p_square_payment_id: squarePaymentId,
-      p_shipping_amount_cents: shippingAmount,
-      p_tax_amount_cents: tax,
-      p_discount_amount_cents: discount,
-      p_save_contact: body.saveContact !== false,
-    });
+    const { data: inserted, error: insertError } = await admin
+      .from("orders")
+      .insert(orderPayload)
+      .select("id")
+      .single();
 
-    if (finalizeError) {
-      await updateAttempt(admin, user.id, body.idempotencyKey, {
-        status: "failed",
-        error_message: finalizeError.message,
-      });
+    if (insertError || !inserted?.id) {
+      console.error("Order insert failed after payment", insertError);
       return json(
         500,
         {
           error:
-            "Payment succeeded but order finalization failed. Support will reconcile using your payment reference.",
+            "Payment succeeded but order saving failed. Support will reconcile using your payment reference.",
           squarePaymentId,
         },
-        corsHeaders
+        corsHeaders,
       );
     }
 
-    await updateAttempt(admin, user.id, body.idempotencyKey, {
-      status: "completed",
-      order_id: orderId,
-      response_payload: { squareOrderId, squarePaymentId, total: chargeAmount },
-    });
+    if (body.saveContact !== false) {
+      await admin
+        .from("profiles")
+        .update({
+          contact_number: contact,
+          full_name: body.customerName.trim(),
+          address_line_1: body.shippingAddress.address_line_1.trim(),
+          city: body.shippingAddress.city.trim(),
+          state: body.shippingAddress.state.trim(),
+          postal_code: body.shippingAddress.postal_code.trim(),
+          country: body.shippingAddress.country.trim() || "US",
+        })
+        .eq("id", user.id);
+    }
 
     return json(
       200,
-      { orderId, squareOrderId, squarePaymentId, totalCents: chargeAmount },
-      corsHeaders
+      {
+        orderId: inserted.id,
+        squareOrderId,
+        squarePaymentId,
+        totalCents: squareOrderTotal,
+      },
+      corsHeaders,
     );
   } catch (error) {
     console.error(error);

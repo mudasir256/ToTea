@@ -1,85 +1,93 @@
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { LocalCartItem } from "@/features/cart/CartProvider";
 import { formatMoney } from "@/lib/money";
-import { Button } from "@/components/ui/button";
 
 type Props = {
   item: LocalCartItem;
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
+  compact?: boolean;
 };
 
-export function CartItemRow({ item, onUpdateQuantity, onRemove }: Props) {
+function itemMeta(item: LocalCartItem) {
+  const toppings = item.selected_options.toppings ?? [];
+  return [
+    item.selected_options.sweetness,
+    item.selected_options.ice,
+    item.selected_options.milk,
+    ...toppings.map((topping) => topping.name),
+    item.quantity > 1 ? `×${item.quantity}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export function CartItemRow({ item, onUpdateQuantity, onRemove, compact = false }: Props) {
   const outOfStock = item.stock_quantity < 1;
   const atMax = item.quantity >= item.stock_quantity;
+  const meta = itemMeta(item);
 
   return (
-    <div className="flex flex-col gap-4 rounded border border-border bg-card p-4 sm:flex-row sm:items-center">
-      <div className="h-24 w-24 overflow-hidden rounded bg-secondary shrink-0">
-        {item.product_image ? (
-          <img src={item.product_image} alt="" className="h-full w-full object-cover" />
+    <div className="flex gap-3 border-b border-border py-3">
+      <div
+        className="h-12 w-12 shrink-0 rounded-lg bg-cover bg-center"
+        style={{
+          backgroundImage: item.product_image
+            ? `url(${item.product_image})`
+            : "linear-gradient(160deg,#8fa06a,#48542f)",
+        }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-semibold text-foreground">{item.product_name}</div>
+        {meta ? (
+          <div className="mt-0.5 text-[11px] leading-[1.5] text-muted-foreground">{meta}</div>
         ) : null}
-      </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-foreground truncate">{item.product_name}</h3>
-        <p className="text-sm text-muted-foreground">Size: {item.selected_options.size}</p>
-        {item.selected_options.toppings && item.selected_options.toppings.length > 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Toppings:{" "}
-            {item.selected_options.toppings
-              .map((topping) =>
-                topping.price_cents > 0
-                  ? `${topping.name} (+${formatMoney(topping.price_cents)})`
-                  : topping.name,
-              )
-              .join(", ")}
-          </p>
-        ) : null}
-        <p className="mt-1 font-medium tabular-nums text-accent">
-          {formatMoney(item.unit_price_cents)}
-        </p>
         {outOfStock ? (
-          <p className="mt-1 text-sm text-destructive">Out of stock</p>
-        ) : atMax ? (
-          <p className="mt-1 text-sm text-accent">Maximum available quantity selected</p>
+          <div className="mt-1 text-[11px] text-destructive">Out of stock</div>
         ) : null}
+
+        {!compact ? (
+          <div className="mt-2 flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Decrease quantity"
+                disabled={item.quantity <= 1}
+                onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-35"
+              >
+                <Minus size={12} />
+              </button>
+              <span className="w-4 text-center text-[12.5px] font-medium tabular-nums">
+                {item.quantity}
+              </span>
+              <button
+                type="button"
+                aria-label="Increase quantity"
+                disabled={atMax || outOfStock}
+                onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-35"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => onRemove(item.id)}
+              className="text-[11px] text-muted-foreground hover:text-destructive"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <Link to="/cart" className="mt-1 inline-block text-[11px] text-accent-hover">
+            Edit
+          </Link>
+        )}
       </div>
-      <div className="flex items-center gap-3">
-        <div className="flex items-center rounded-full border border-border bg-background">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Decrease quantity"
-            disabled={item.quantity <= 1}
-            onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-          >
-            <Minus className="h-4 w-4" />
-          </Button>
-          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Increase quantity"
-            disabled={atMax || outOfStock}
-            onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="w-20 text-right font-semibold">
-          {formatMoney(item.unit_price_cents * item.quantity)}
-        </p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label="Remove item"
-          onClick={() => onRemove(item.id)}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+      <div className="text-[13px] font-semibold tabular-nums text-foreground">
+        {formatMoney(item.unit_price_cents * item.quantity)}
       </div>
     </div>
   );

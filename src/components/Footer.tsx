@@ -1,203 +1,118 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react';
-import { ScrollLink } from '@/components/ScrollLink';
-import logo from '@/assets/logo.png';
+import { useState } from "react";
+import { ScrollLink } from "@/components/ScrollLink";
 
-const quickLinks = [
-  { label: 'Home', href: '/' },
-  { label: 'Menu', href: '/menu' },
-  { label: 'About Us', href: '/about' },
-  { label: 'Contact Us', href: '/contact' },
-  { label: 'Order Online', href: '/order' },
-];
-
-const socialLinks = [
-  { icon: Instagram, href: '#', label: 'Instagram' },
-  { icon: Facebook, href: '#', label: 'Facebook' },
-  { icon: Twitter, href: '#', label: 'Twitter' },
+const exploreLinks = [
+  { label: "Home", href: "/" },
+  { label: "Our Story", href: "/about" },
+  { label: "Order Now", href: "/menu" },
+  { label: "Locations", href: "/locations" },
 ];
 
 export const Footer = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle newsletter signup
-    setEmail('');
-    alert('Thank you for subscribing!');
+    setEmail("");
+    alert("Thank you for joining!");
   };
 
   return (
-    <footer className="px-4 pb-4 pt-10 sm:px-6 sm:pb-6 lg:px-8">
-      <div className="mx-auto max-w-7xl rounded-[2rem] bg-primary text-primary-foreground">
-        <div className="px-6 py-14 md:px-12 md:py-16">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-            {/* Brand */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-            >
-              <ScrollLink to="/" className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl overflow-hidden">
-                  <img 
-                    src={logo} 
-                    alt="Totea Logo" 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <span className="font-serif text-xl font-bold">Totea</span>
-                  <p className="text-[10px] uppercase tracking-wider text-primary-foreground/60 -mt-0.5">
-                    Bubble Tea & More
-                  </p>
-                </div>
-              </ScrollLink>
-              <p className="text-sm text-primary-foreground/70 leading-relaxed mb-6">
-                Premium Bubble Tea & Coffee in Northern Virginia. Crafted with passion,
-                served with love.
-              </p>
-              {/* Social Links */}
-              <div className="flex items-center gap-3">
-                {socialLinks.map((social) => (
-                  <a
-                    key={social.label}
-                    href={social.href}
-                    className="w-10 h-10 rounded-full bg-primary-foreground/10 flex items-center justify-center hover:bg-accent transition-colors"
-                    aria-label={social.label}
-                  >
-                    <social.icon size={18} />
-                  </a>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Quick Links */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <h4 className="font-semibold mb-6">Quick Links</h4>
-              <ul className="space-y-3">
-                {quickLinks.map((link) => (
-                  <li key={link.label}>
-                    <ScrollLink
-                      to={link.href}
-                      className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-                    >
-                      {link.label}
-                    </ScrollLink>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            {/* Contact */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <h4 className="font-semibold mb-6">Contact</h4>
-              <ul className="space-y-4">
-                <li className="flex items-start gap-3">
-                  <Phone size={18} className="text-accent mt-0.5" />
-                  <a
-                    href="tel:+17035550100"
-                    className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-                  >
-                    (703) 555-0100
-                  </a>
-                </li>
-                <li className="flex items-start gap-3">
-                  <Mail size={18} className="text-accent mt-0.5" />
-                  <a
-                    href="mailto:hello@totea.com"
-                    className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-                  >
-                    hello@totea.com
-                  </a>
-                </li>
-                <li className="flex items-start gap-3">
-                  <MapPin size={18} className="text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-primary-foreground/70">
-                    Northern Virginia
-                  </span>
-                </li>
-              </ul>
-            </motion.div>
-
-            {/* Newsletter */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <h4 className="font-semibold mb-6">Stay Updated</h4>
-              <p className="text-sm text-primary-foreground/70 mb-4">
-                Get updates on new menu items, special offers, and events
-              </p>
-              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Your email"
-                  className="px-4 py-3 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40 focus:outline-none focus:border-accent transition-colors"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="btn-accent !rounded-full !py-3 text-center"
-                >
-                  Subscribe
-                </button>
-              </form>
-            </motion.div>
+    <footer className="mt-[60px] border-t border-border px-5 pt-14 md:px-8 md:pt-14">
+      <div className="mx-auto max-w-[1100px]">
+        <div className="grid gap-10 border-b border-border pb-11 md:grid-cols-2 lg:grid-cols-[1.3fr_0.8fr_0.8fr_1.1fr] lg:gap-10">
+          <div className="md:col-span-2 lg:col-span-1">
+            <div className="mb-1.5 font-serif text-[23px] font-semibold text-foreground">
+              Totea
+            </div>
+            <p className="max-w-[260px] text-[12.5px] leading-[1.7] text-muted-foreground">
+              A cup worth slowing down for. Manassas, VA.
+            </p>
           </div>
 
-          {/* Bottom Bar */}
-          <div className="pt-8 border-t border-primary-foreground/10">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-primary-foreground/60">
-                Copyright © {new Date().getFullYear()} Totea by{' '}
-                <a
-                  href="https://www.clapit.solutions/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-accent font-semibold hover:text-accent/80 transition-colors"
-                >
-                  CLAPIT.SOLUTIONS
-                </a>{' '}
-                All Rights Reserved.
-              </p>
-              <div className="flex items-center gap-6">
-                <a
-                  href="#"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
-                >
-                  Privacy Policy
-                </a>
-                <a
-                  href="#"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
-                >
-                  Terms of Service
-                </a>
-                <a
-                  href="#"
-                  className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
-                >
-                  Careers
-                </a>
-              </div>
+          <div>
+            <div className="mb-4 text-[12px] font-bold uppercase tracking-[0.06em] text-accent-hover">
+              Explore
             </div>
+            {exploreLinks.map((link) => (
+              <ScrollLink
+                key={link.label}
+                to={link.href}
+                className="mb-3 block text-[13px] text-foreground/80 transition-opacity hover:opacity-100"
+              >
+                {link.label}
+              </ScrollLink>
+            ))}
+          </div>
+
+          <div>
+            <div className="mb-4 text-[12px] font-bold uppercase tracking-[0.06em] text-accent-hover">
+              Visit
+            </div>
+            <ScrollLink
+              to="/locations"
+              className="mb-3 block text-[13px] leading-relaxed text-foreground/80"
+            >
+              9534 Liberia Ave
+              <br />
+              Manassas, VA 20110
+            </ScrollLink>
+            <ScrollLink
+              to="/contact"
+              className="mb-3 block text-[13px] text-foreground/80"
+            >
+              Contact us
+            </ScrollLink>
+            <ScrollLink
+              to="/locations"
+              className="mb-3 block text-[13px] leading-relaxed text-foreground/80"
+            >
+              Mon–Thu 11–9
+              <br />
+              Fri–Sat 11–10 · Sun 12–8
+            </ScrollLink>
+          </div>
+
+          <div>
+            <div className="mb-4 text-[12px] font-bold uppercase tracking-[0.06em] text-accent-hover">
+              Get $2 off your first order
+            </div>
+            <p className="mb-3.5 text-[12.5px] leading-[1.6] text-muted-foreground">
+              Join for early access to seasonal drinks and local promos — texted or
+              emailed, your choice.
+            </p>
+            <form onSubmit={handleSubmit} className="mb-2.5 flex gap-2">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@email.com"
+                required
+                className="min-w-0 flex-1 rounded-md border border-border bg-white px-3 py-2.5 text-[12.5px] text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded-md bg-accent px-4 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-active"
+              >
+                Join
+              </button>
+            </form>
+            <p className="text-[10.5px] leading-[1.5] text-muted-foreground">
+              By joining, you agree to receive promotional messages. Reply STOP to
+              unsubscribe anytime.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-start justify-between gap-2.5 py-5 text-[11.5px] text-muted-foreground sm:flex-row sm:items-center">
+          <span>© {new Date().getFullYear()} Totea. All rights reserved.</span>
+          <div className="flex gap-5">
+            <a href="#" className="hover:text-foreground">
+              Privacy Policy
+            </a>
+            <a href="#" className="hover:text-foreground">
+              Terms of Service
+            </a>
           </div>
         </div>
       </div>

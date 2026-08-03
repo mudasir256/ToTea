@@ -1,5 +1,5 @@
+import { useState } from "react";
 import { formatMoney } from "@/lib/money";
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 type Props = {
@@ -11,6 +11,9 @@ type Props = {
   checkoutHref?: string;
   showCheckout?: boolean;
   disabled?: boolean;
+  checkoutLabel?: string;
+  showPromo?: boolean;
+  showTip?: boolean;
 };
 
 export function CartSummary({
@@ -22,42 +25,73 @@ export function CartSummary({
   checkoutHref = "/checkout",
   showCheckout = true,
   disabled,
+  checkoutLabel,
+  showPromo = true,
+  showTip = true,
 }: Props) {
+  const [promo, setPromo] = useState("");
+
   return (
-    <div className="rounded border border-border bg-card p-6">
-      <h2 className="mb-5 font-serif text-lg font-medium">Order summary</h2>
-      <dl className="space-y-3 text-sm tabular-nums">
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Subtotal</dt>
-          <dd>{formatMoney(subtotalCents)}</dd>
+    <div>
+      {showPromo ? (
+        <div className="mb-1.5 mt-3.5 flex gap-2">
+          <input
+            type="text"
+            value={promo}
+            onChange={(event) => setPromo(event.target.value)}
+            placeholder="Promo code"
+            className="min-w-0 flex-1 rounded-[7px] border border-border bg-white px-3 py-2 text-[12.5px] text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none"
+          />
+          <button
+            type="button"
+            className="rounded-[7px] border border-foreground bg-white px-3.5 py-2 text-[12px] font-semibold text-foreground"
+          >
+            Apply
+          </button>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Shipping</dt>
-          <dd>{shippingCents === 0 ? "Free" : formatMoney(shippingCents)}</dd>
+      ) : null}
+
+      <div className="flex justify-between py-2 text-[13px]">
+        <span className="text-muted-foreground">Subtotal</span>
+        <span className="tabular-nums">{formatMoney(subtotalCents)}</span>
+      </div>
+      {shippingCents > 0 ? (
+        <div className="flex justify-between py-2 text-[13px]">
+          <span className="text-muted-foreground">Shipping</span>
+          <span className="tabular-nums">{formatMoney(shippingCents)}</span>
         </div>
-        {discountCents > 0 ? (
-          <div className="flex justify-between text-accent">
-            <dt>Discount</dt>
-            <dd>-{formatMoney(discountCents)}</dd>
-          </div>
-        ) : null}
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Tax</dt>
-          <dd>{formatMoney(taxCents)}</dd>
+      ) : null}
+      {discountCents > 0 ? (
+        <div className="flex justify-between py-2 text-[13px] text-accent">
+          <span>Discount</span>
+          <span className="tabular-nums">-{formatMoney(discountCents)}</span>
         </div>
-        <div className="flex items-baseline justify-between border-t border-border pt-3.5">
-          <dt className="text-base font-medium">Total</dt>
-          <dd className="font-serif text-xl font-medium text-accent">
-            {formatMoney(totalCents)}
-          </dd>
+      ) : null}
+      <div className="flex justify-between py-2 text-[13px]">
+        <span className="text-muted-foreground">Tax</span>
+        <span className="tabular-nums">{formatMoney(taxCents)}</span>
+      </div>
+      {showTip ? (
+        <div className="flex justify-between py-2 text-[13px]">
+          <span className="text-muted-foreground">Tip</span>
+          <span>—</span>
         </div>
-      </dl>
+      ) : null}
+      <div className="mt-1.5 flex justify-between border-t border-border pt-3 text-[14.5px] font-bold">
+        <span>Total</span>
+        <span className="tabular-nums">{formatMoney(totalCents)}</span>
+      </div>
+
       {showCheckout ? (
-        <>
-          <Button asChild className="btn-accent mt-6 h-12 w-full !rounded-full" disabled={disabled}>
-            <Link to={checkoutHref}>Proceed to checkout</Link>
-          </Button>
-        </>
+        <Link
+          to={checkoutHref}
+          aria-disabled={disabled}
+          className={`mt-2 block w-full rounded-lg bg-accent py-[15px] text-center text-[14.5px] font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-active ${
+            disabled ? "pointer-events-none opacity-45" : ""
+          }`}
+        >
+          {checkoutLabel ?? `Continue to payment · ${formatMoney(totalCents)}`}
+        </Link>
       ) : null}
     </div>
   );

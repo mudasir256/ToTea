@@ -1,28 +1,18 @@
-import { useLenis } from '@/hooks/useLenis';
-import { Header } from '@/components/Header';
-import { HappyHour } from '@/components/HappyHour';
-import { FeaturedProducts } from '@/components/FeaturedProducts';
-import { Quality } from '@/components/Quality';
-import { OrderOnline } from '@/components/OrderOnline';
-import { Reviews } from '@/components/Reviews';
-import { ContactSection } from '@/components/ContactSection';
-import { Footer } from '@/components/Footer';
-import { HeroSection } from '@/components/HeroSection';
+import { useLenis } from "@/hooks/useLenis";
+import { Header } from "@/components/Header";
+import { Hero } from "@/components/Hero";
+import { HomeStory } from "@/components/HomeStory";
+import { Footer } from "@/components/Footer";
 
 const Home = () => {
   useLenis();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Header />
-      <main className="relative">
-        <HeroSection />
-        <FeaturedProducts />
-        <HappyHour />
-        <Quality />
-        <OrderOnline hideHeader />
-        <Reviews />
-        <ContactSection />
+      <main>
+        <Hero />
+        <HomeStory />
       </main>
       <Footer />
     </div>

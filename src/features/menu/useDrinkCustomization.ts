@@ -7,6 +7,14 @@ import {
   useCart,
   type CartToppingSelection,
 } from "@/features/cart/CartProvider";
+import {
+  DEFAULT_ICE,
+  DEFAULT_MILK,
+  DEFAULT_SWEETNESS,
+  drinkIncludesFreeTopping,
+  MAX_STANDARD_TOPPINGS_DEFAULT,
+  MAX_STANDARD_TOPPINGS_MILK_TEA,
+} from "@/features/menu/drinkOptions";
 import type {
   MenuItemVariant,
   MenuItemWithVariants,
@@ -44,8 +52,7 @@ const toSelection = (topping: MenuTopping): CartToppingSelection => ({
 type AddItem = ReturnType<typeof useCart>["addItem"];
 
 /**
- * Quick "+ Add" path: cheapest available size, no toppings.
- * Still re-checks live stock so it cannot outrun the customization flow.
+ * Quick "+ Add" path: cheapest available size, default sweetness/ice/milk, no toppings.
  */
 export async function addDefaultToCart(
   item: MenuItemWithVariants,
@@ -70,10 +77,20 @@ export async function addDefaultToCart(
 
     await addItem({
       product_id: item.id,
-      product_variant_id: buildCartVariantId(item.id, variant.size),
+      product_variant_id: buildCartVariantId(item.id, variant.size, [], {
+        sweetness: DEFAULT_SWEETNESS,
+        ice: DEFAULT_ICE,
+        milk: DEFAULT_MILK,
+      }),
       product_name: item.name,
       product_image: item.image_url,
-      selected_options: { size: variant.size, toppings: [] },
+      selected_options: {
+        size: variant.size,
+        sweetness: DEFAULT_SWEETNESS,
+        ice: DEFAULT_ICE,
+        milk: DEFAULT_MILK,
+        toppings: [],
+      },
       unit_price_cents: Math.round(Number(variant.price) * 100),
       stock_quantity: availableQuantity(currentStock, item.id, variant.size),
       quantity: 1,
@@ -85,9 +102,7 @@ export async function addDefaultToCart(
 }
 
 /**
- * Size and topping selection, live pricing, and the stock-checked add-to-cart call.
- * Shared by the product page and the customization modal so both behave identically.
- * `initialStock` must be referentially stable (component state, not an inline array).
+ * Size, sweetness, ice, milk, and topping selection with live pricing + stock check.
  */
 export function useDrinkCustomization(
   item: MenuItemWithVariants | null,
@@ -97,30 +112,42 @@ export function useDrinkCustomization(
   const { addItem } = useCart();
   const [stock, setStock] = useState<MenuStockAvailability[]>(initialStock);
   const [selectedSize, setSelectedSize] = useState("");
-  const [selectedToppingIds, setSelectedToppingIds] = useState<string[]>([]);
+  const [selectedSweetness, setSelectedSweetness] = useState(DEFAULT_SWEETNESS);
+  const [selectedIce, setSelectedIce] = useState(DEFAULT_ICE);
+  const [selectedMilk, setSelectedMilk] = useState(DEFAULT_MILK);
+  const [selectedCreamId, setSelectedCreamId] = useState<string | null>(null);
+  const [selectedStandardIds, setSelectedStandardIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
 
   const variants = useMemo(() => (item ? variantsFor(item) : []), [item]);
   const sizes = useMemo(() => variants.map((variant) => variant.size), [variants]);
 
+  const creamToppings = useMemo(
+    () => toppings.filter((topping) => topping.category === "cream"),
+    [toppings],
+  );
+  const standardToppings = useMemo(
+    () => toppings.filter((topping) => topping.category === "standard"),
+    [toppings],
+  );
+
   const toppingGroups = useMemo(
     () =>
       [
-        { title: "Standard toppings", category: "standard" as const },
-        { title: "Cream toppings", category: "cream" as const },
-      ]
-        .map((group) => ({
-          ...group,
-          items: toppings.filter((topping) => topping.category === group.category),
-        }))
-        .filter((group) => group.items.length > 0),
-    [toppings],
+        { title: "Standard toppings", category: "standard" as const, items: standardToppings },
+        { title: "Cream toppings", category: "cream" as const, items: creamToppings },
+      ].filter((group) => group.items.length > 0),
+    [standardToppings, creamToppings],
   );
 
   useEffect(() => {
     setStock(initialStock);
-    setSelectedToppingIds([]);
+    setSelectedCreamId(null);
+    setSelectedStandardIds([]);
+    setSelectedSweetness(DEFAULT_SWEETNESS);
+    setSelectedIce(DEFAULT_ICE);
+    setSelectedMilk(DEFAULT_MILK);
     setQuantity(1);
     if (!item) {
       setSelectedSize("");
@@ -133,11 +160,34 @@ export function useDrinkCustomization(
     );
   }, [item, initialStock]);
 
-  const selectedToppings: CartToppingSelection[] = useMemo(
-    () =>
-      toppings.filter((topping) => selectedToppingIds.includes(topping.id)).map(toSelection),
-    [toppings, selectedToppingIds],
-  );
+  const includesFreeTopping = Boolean(item && drinkIncludesFreeTopping(item.name));
+  const maxStandardToppings = includesFreeTopping
+    ? MAX_STANDARD_TOPPINGS_MILK_TEA
+    : MAX_STANDARD_TOPPINGS_DEFAULT;
+  /** First selected standard topping is free on milk tea. */
+  const freeStandardToppingId = includesFreeTopping
+    ? (selectedStandardIds[0] ?? null)
+    : null;
+
+  const selectedToppings: CartToppingSelection[] = useMemo(() => {
+    const cream = creamToppings.find((topping) => topping.id === selectedCreamId);
+    const standards = standardToppings.filter((topping) =>
+      selectedStandardIds.includes(topping.id),
+    );
+    return [...(cream ? [cream] : []), ...standards].map((topping) => {
+      const selection = toSelection(topping);
+      if (topping.id === freeStandardToppingId) {
+        return { ...selection, price_cents: 0 };
+      }
+      return selection;
+    });
+  }, [
+    creamToppings,
+    standardToppings,
+    selectedCreamId,
+    selectedStandardIds,
+    freeStandardToppingId,
+  ]);
 
   const toppingsPriceCents = useMemo(
     () => selectedToppings.reduce((sum, topping) => sum + topping.price_cents, 0),
@@ -158,18 +208,49 @@ export function useDrinkCustomization(
     item && sizes.some((size) => availableQuantity(stock, item.id, size) > 0),
   );
 
-  const toggleTopping = (toppingId: string) => {
-    setSelectedToppingIds((current) =>
-      current.includes(toppingId)
-        ? current.filter((id) => id !== toppingId)
-        : [...current, toppingId],
-    );
+  const toggleStandardTopping = (toppingId: string) => {
+    setSelectedStandardIds((current) => {
+      if (current.includes(toppingId)) {
+        return current.filter((id) => id !== toppingId);
+      }
+      if (current.length >= maxStandardToppings) {
+        toast.error(
+          includesFreeTopping
+            ? "You can add up to 2 toppings beyond the 1 included free."
+            : `Choose up to ${maxStandardToppings} toppings.`,
+        );
+        return current;
+      }
+      return [...current, toppingId];
+    });
   };
+
+  /** Cream tops are single-select (None or one cream). */
+  const selectCream = (toppingId: string | null) => {
+    setSelectedCreamId(toppingId);
+  };
+
+  /** Back-compat for ProductDetail which still calls toggleTopping. */
+  const toggleTopping = (toppingId: string) => {
+    const cream = creamToppings.find((topping) => topping.id === toppingId);
+    if (cream) {
+      setSelectedCreamId((current) => (current === toppingId ? null : toppingId));
+      return;
+    }
+    toggleStandardTopping(toppingId);
+  };
+
+  const selectedToppingIds = useMemo(
+    () => [
+      ...(selectedCreamId ? [selectedCreamId] : []),
+      ...selectedStandardIds,
+    ],
+    [selectedCreamId, selectedStandardIds],
+  );
 
   const priceForSize = (size: string) =>
     Math.round(Number(variants.find((variant) => variant.size === size)?.price ?? 0) * 100);
 
-  /** Resolves true when the drink reached the cart, so callers can close a modal. */
   const addToCart = async (): Promise<boolean> => {
     if (!item || !selectedSize) {
       toast.error("This item is currently unavailable.");
@@ -202,10 +283,20 @@ export function useDrinkCustomization(
 
       await addItem({
         product_id: item.id,
-        product_variant_id: buildCartVariantId(item.id, selectedSize, selectedToppings),
+        product_variant_id: buildCartVariantId(item.id, selectedSize, selectedToppings, {
+          sweetness: selectedSweetness,
+          ice: selectedIce,
+          milk: selectedMilk,
+        }),
         product_name: item.name,
         product_image: item.image_url,
-        selected_options: { size: selectedSize, toppings: selectedToppings },
+        selected_options: {
+          size: selectedSize,
+          sweetness: selectedSweetness,
+          ice: selectedIce,
+          milk: selectedMilk,
+          toppings: selectedToppings,
+        },
         unit_price_cents: totalUnitPriceCents,
         stock_quantity: currentQuantity,
         quantity,
@@ -225,9 +316,24 @@ export function useDrinkCustomization(
     sizes,
     selectedSize,
     setSelectedSize,
+    selectedSweetness,
+    setSelectedSweetness,
+    selectedIce,
+    setSelectedIce,
+    selectedMilk,
+    setSelectedMilk,
+    selectedCreamId,
+    selectCream,
+    selectedStandardIds,
+    toggleStandardTopping,
     selectedToppingIds,
     toggleTopping,
+    creamToppings,
+    standardToppings,
     toppingGroups,
+    includesFreeTopping,
+    freeStandardToppingId,
+    maxStandardToppings,
     quantity,
     setQuantity,
     adding,

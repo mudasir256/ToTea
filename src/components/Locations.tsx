@@ -1,7 +1,11 @@
-import { motion } from 'framer-motion';
-import { MapPin, Phone, Clock, ExternalLink } from 'lucide-react';
-import { ScrollLink } from '@/components/ScrollLink';
-import { locations } from '@/data/menu';
+import { Link } from "react-router-dom";
+
+const MAPS_PLACE_URL =
+  "https://www.google.com/maps/place/Totea/@38.7506653,-77.4506,17z/data=!3m1!4b1!4m6!3m5!1s0x89b65b0036266e09:0xb1aa00c6a78ebc0d!8m2!3d38.7506653!4d-77.4506!16s%2Fg%2F11yyn9rth_!18m1!1e1?entry=ttu";
+
+/** Official Google Maps embed for the Totea Manassas place pin. */
+const MAP_EMBED =
+  "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3105.5!2d-77.4506!3d38.7506653!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89b65b0036266e09%3A0xb1aa00c6a78ebc0d!2sTotea!5e0!3m2!1sen!2sus!4v1720000000000!5m2!1sen!2sus";
 
 interface LocationsProps {
   hideHeader?: boolean;
@@ -9,111 +13,85 @@ interface LocationsProps {
 
 export const Locations = ({ hideHeader = false }: LocationsProps) => {
   return (
-    <section className="section-padding bg-secondary/50">
-      <div className="container mx-auto px-6 md:px-12 lg:px-20">
-        <div className="max-w-7xl mx-auto">
-          {/* Section Header */}
-          {!hideHeader && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="text-center mb-16"
-            >
-            <span className="inline-block text-sm uppercase tracking-[0.2em] text-muted-foreground mb-4">
-              Visit Us
-            </span>
-            <h2 className="heading-lg mb-6">
-              Find Your Nearest <span className="text-gradient">Totea</span>
-            </h2>
-            <p className="body-lg text-muted-foreground max-w-2xl mx-auto">
-              Visit us at one of our locations across Northern Virginia
-            </p>
-          </motion.div>
-          )}
+    <section className="mx-auto max-w-[1100px]">
+      {!hideHeader ? null : (
+        <div className="px-5 pb-2 pt-10 md:px-8 md:pb-2 md:pt-[60px]">
+          <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-hover">
+            Visit us
+          </div>
+          <h1 className="mb-2 font-serif text-[30px] font-semibold text-foreground md:text-[32px]">
+            Find us in Manassas
+          </h1>
+          <p className="max-w-[480px] text-[14px] leading-[1.6] text-muted-foreground">
+            One location, brewing fresh every day. Stop in, or order ahead and skip the
+            line.
+          </p>
+        </div>
+      )}
 
-          {/* Locations Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {locations.map((location, index) => (
-              <motion.div
-                key={location.city}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="location-card group"
-              >
-                {/* City Name */}
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin size={18} className="text-accent" />
-                  <h3 className="text-xl font-serif font-semibold">{location.city}</h3>
-                </div>
+      <div className="mx-5 mt-6 overflow-hidden rounded-2xl border border-border md:mx-8 md:mt-10 md:grid md:grid-cols-2">
+        <div className="relative min-h-[280px] overflow-hidden bg-[#e8e0d4] md:min-h-[380px]">
+          <iframe
+            title="Totea Manassas map"
+            src={MAP_EMBED}
+            className="absolute inset-0 h-full w-full border-0"
+            loading="lazy"
+            referrerPolicy="origin"
+            allowFullScreen
+          />
+        </div>
 
-                {/* Address */}
-                <p className="text-muted-foreground mb-4 leading-relaxed">
-                  {location.address}
-                </p>
-
-                {/* Hours */}
-                <div className="flex items-start gap-2 mb-4">
-                  <Clock size={16} className="text-muted-foreground mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-muted-foreground">
-                    <p>{location.hours.weekday}</p>
-                    {location.hours.sunday && <p>{location.hours.sunday}</p>}
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="flex items-center gap-2 mb-6">
-                  <Phone size={16} className="text-muted-foreground" />
-                  <a
-                    href={`tel:${location.phone}`}
-                    className="text-sm text-foreground hover:text-accent transition-colors"
-                  >
-                    {location.phone}
-                  </a>
-                </div>
-
-                {/* Order Button */}
-                <ScrollLink
-                  to="/order"
-                  className="inline-flex items-center gap-2 text-accent font-medium hover:gap-3 transition-all"
-                >
-                  Order Online
-                  <ExternalLink size={16} />
-                </ScrollLink>
-              </motion.div>
-            ))}
+        <div className="px-6 py-8 md:px-10 md:py-11">
+          <div className="mb-1.5 font-serif text-[22px] font-semibold text-foreground">
+            Totea — Manassas
+          </div>
+          <div className="mb-5 text-[14.5px] leading-[1.6] text-foreground/85">
+            9534 Liberia Ave
+            <br />
+            Manassas, VA 20110
           </div>
 
-          {/* Late Night Banner */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mt-12 p-8 md:p-12 rounded-4xl bg-primary text-primary-foreground text-center"
-          >
-            <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
-              <span className="text-4xl">🌙</span>
-              <h3 className="text-2xl md:text-3xl font-serif font-semibold">
-                Late Night Every Night!
-              </h3>
+          <div className="border-t border-border py-3.5">
+            <div className="mb-1 text-[12px] uppercase tracking-[0.04em] text-muted-foreground">
+              Hours
             </div>
-            <p className="text-primary-foreground/80 max-w-xl mx-auto">
-              Most locations open until midnight or later. Perfect for your late-night
-              bubble tea cravings!
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-6 mt-6">
-              <span className="px-4 py-2 rounded-full bg-primary-foreground/10 text-sm font-medium">
-                Extended Hours
-              </span>
-              <span className="px-4 py-2 rounded-full bg-primary-foreground/10 text-sm font-medium">
-                Multiple Locations
-              </span>
+            <div className="text-[14px] text-foreground">Mon–Thu · 11:00 AM – 9:00 PM</div>
+            <div className="text-[14px] text-foreground">Fri–Sat · 11:00 AM – 10:00 PM</div>
+            <div className="text-[14px] text-foreground">Sun · 12:00 PM – 8:00 PM</div>
+          </div>
+
+          <div className="border-t border-border py-3.5">
+            <div className="mb-1 text-[12px] uppercase tracking-[0.04em] text-muted-foreground">
+              Phone
             </div>
-          </motion.div>
+            <div className="text-[14px] text-foreground">
+              (placeholder — add shop number)
+            </div>
+          </div>
+
+          <div className="border-t border-border py-3.5">
+            <div className="mb-1 text-[12px] uppercase tracking-[0.04em] text-muted-foreground">
+              Parking
+            </div>
+            <div className="text-[14px] text-foreground">On-site parking available</div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-2.5">
+            <Link
+              to="/menu"
+              className="inline-block rounded-full bg-accent px-[22px] py-3 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-active"
+            >
+              Order now
+            </Link>
+            <a
+              href={MAPS_PLACE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block rounded-full border border-foreground px-[22px] py-3 text-[13.5px] font-semibold text-foreground transition-colors hover:bg-foreground hover:text-background"
+            >
+              Get directions
+            </a>
+          </div>
         </div>
       </div>
     </section>

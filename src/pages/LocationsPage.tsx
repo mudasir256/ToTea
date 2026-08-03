@@ -1,20 +1,20 @@
 import { useLenis } from "@/hooks/useLenis";
 import { Header } from "@/components/Header";
-import { About } from "@/components/About";
+import { Locations } from "@/components/Locations";
 import { Footer } from "@/components/Footer";
 
-const AboutPage = () => {
+const LocationsPage = () => {
   useLenis();
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main>
-        <About hideHeader />
+        <Locations hideHeader />
       </main>
       <Footer />
     </div>
   );
 };
 
-export default AboutPage;
+export default LocationsPage;
