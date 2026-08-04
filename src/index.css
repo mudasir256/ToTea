@@ -134,6 +134,21 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
+  /* Menu category pills: gap above scrollbar + thinner horizontal bar */
+  .menu-category-tabs::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .menu-category-tabs::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 999px;
+  }
+
+  .menu-category-tabs::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.35);
+    border-radius: 999px;
+  }
+
   ::selection {
     background: hsl(var(--accent));
     color: white;

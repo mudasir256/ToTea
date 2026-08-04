@@ -324,7 +324,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         ) : (
           <>
             <div className="px-4 pt-5 md:px-8">
-              <div className="relative max-w-[340px]">
+              <div className="relative w-full">
                 <Search
                   size={15}
                   strokeWidth={1.75}
@@ -342,7 +342,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
             </div>
 
             <div className="sticky top-[73px] z-30 border-b border-border bg-background px-4 pb-3 pt-[18px] md:px-8">
-              <div className="flex gap-2 overflow-x-auto pb-0.5">
+              <div className="menu-category-tabs flex gap-2 overflow-x-auto pb-2.5">
                 <button
                   type="button"
                   onClick={() => scrollToCategory(ALL_TAB)}

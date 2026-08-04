@@ -107,12 +107,8 @@ export const Footer = () => {
         <div className="flex flex-col items-start justify-between gap-2.5 py-5 text-[11.5px] text-muted-foreground sm:flex-row sm:items-center">
           <span>© {new Date().getFullYear()} Totea. All rights reserved.</span>
           <div className="flex gap-5">
-            <a href="#" className="hover:text-foreground">
-              Privacy Policy
-            </a>
-            <a href="#" className="hover:text-foreground">
-              Terms of Service
-            </a>
+            <span>Privacy Policy</span>
+            <span>Terms of Service</span>
           </div>
         </div>
       </div>
