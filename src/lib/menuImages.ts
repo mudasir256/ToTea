@@ -1,86 +1,65 @@
-// Import all menu images
-import AvocadoSmoothie from '@/assets/AvocadoSmoothie.jpg';
-import BrownSugarMilk from '@/assets/BrownSugarMilk.jpg';
-import BrownSugarMilkTea from '@/assets/BrownSugarMilkTea.webp';
-import ClassicMilkTea from '@/assets/ClassicMilkTea.jpg';
-import CremeBruleeBrownSugarMilk from '@/assets/CremeBruleeBrownSugarMilk.webp';
-import EggCream from '@/assets/EggCream.webp';
-import EggVietnameseCoffee from '@/assets/EggVietnameseCoffee.png';
-import GrapefruitTea from '@/assets/GrapefruitTea.webp';
-import HoneydewMilkTea from '@/assets/HoneydewMilkTea.webp';
-import HorchataMilkTea from '@/assets/HorchataMilkTea.webp';
-import MangoMilkTea from '@/assets/MangoMilkTea.webp';
-import MangoSagoCoconutMilk from '@/assets/MangoSagoCoconutMilk.webp';
-import MatchaCream from '@/assets/MatchaCream.jpg';
-import MatchaLatte from '@/assets/MatchaLatte.jpg';
-import MatchaSmoothie from '@/assets/MatchaSmoothie.jpg';
-import PeachOolongTea from '@/assets/PeachOolongTea.jpeg';
-import PistachioMilkTea from '@/assets/PistachioMilkTea.webp';
-import RoastedOolongMilkTea from '@/assets/RoastedOolongMilkTea.jpg';
-import SeaSaltCream from '@/assets/SeaSaltCream.jpg';
-import SeaSaltJasmineTea from '@/assets/SeaSaltJasmineTea.jpg';
-import StrawberryMatchaLatte from '@/assets/StrawberryMatchaLatte.jpg';
-import StrawberryPassionfruitTea from '@/assets/StrawberryPassionfruitTea.jpg';
-import ThaiMilkTea from '@/assets/ThaiMilkTea.jpg';
-import UbeCream from '@/assets/UbeCream.jpg';
-import UbeMilkTea from '@/assets/UbeMilkTea.webp';
-import UbeSmoothie from '@/assets/UbeSmoothie.webp';
-import UbeVietnameseCoffee from '@/assets/UbeVietnameseCoffee.jpg';
-import VietnameseSeaSaltCoffee from '@/assets/VietnameseSeaSaltCoffee.png';
-// Import topping images
-import HoneyBoba from '@/assets/honeyboba.webp';
-import Jelly from '@/assets/Jelly.webp';
-import SeaSaltCreamTopping from '@/assets/SeaSaltCream.jpg';
-import UbeCreamTopping from '@/assets/UbeCream.jpg';
-import MatchaCreamTopping from '@/assets/MatchaCream.jpg';
-import EggCreamTopping from '@/assets/EggCream.webp';
+/**
+ * Same-origin optimized card images under /public/menu and /public/toppings.
+ * Served by Vite/nginx — much faster than remote Supabase storage from AP.
+ */
 
-// Map menu item names to their corresponding images
 export const menuImageMap: Record<string, string> = {
-  'Vietnamese Sea Salt Coffee': VietnameseSeaSaltCoffee,
-  'Ube Vietnamese Coffee': UbeVietnameseCoffee,
-  'Egg Vietnamese Coffee': EggVietnameseCoffee,
-  'Brown Sugar Milk': BrownSugarMilk,
-  'Brown Sugar Milk Tea': BrownSugarMilkTea,
-  'Crème Brûlée Brown Sugar Milk': CremeBruleeBrownSugarMilk,
-  'Classic Milk Tea': ClassicMilkTea,
-  'Thai Milk Tea': ThaiMilkTea,
-  'Roasted Oolong Milk Tea': RoastedOolongMilkTea,
-  'Ube Milk Tea': UbeMilkTea,
-  'Pistachio Milk Tea': PistachioMilkTea,
-  'Horchata Milk Tea': HorchataMilkTea,
-  'Mango Milk Tea': MangoMilkTea,
-  'Honeydew Milk Tea': HoneydewMilkTea,
-  'Matcha Latte': MatchaLatte,
-  'Strawberry Matcha Latte': StrawberryMatchaLatte,
-  'Mango Matcha Latte': MangoMilkTea, // Using Mango Milk Tea as fallback
-  'Coconut Matcha': MatchaLatte, // Using Matcha Latte as fallback
-  'Sea Salt Jasmine Tea': SeaSaltJasmineTea,
-  'Peach Oolong Tea': PeachOolongTea,
-  'Strawberry Passionfruit Tea': StrawberryPassionfruitTea,
-  'Grapefruit Tea': GrapefruitTea,
-  'Mango Sago Coconut Milk': MangoSagoCoconutMilk,
-  'Avocado Smoothie': AvocadoSmoothie,
-  'Ube Smoothie': UbeSmoothie,
-  'Matcha Smoothie': MatchaSmoothie,
+  "Vietnamese Sea Salt Coffee": "/menu/vietnamese-sea-salt-coffee.webp",
+  "Ube Vietnamese Coffee": "/menu/ube-vietnamese-coffee.webp",
+  "Egg Vietnamese Coffee": "/menu/egg-vietnamese-coffee.webp",
+  "Brown Sugar Milk": "/menu/brown-sugar-milk.webp",
+  "Brown Sugar Milk Tea": "/menu/brown-sugar-milk-tea.webp",
+  "Crème Brûlée Brown Sugar Milk": "/menu/creme-brulee-brown-sugar-milk.webp",
+  "Classic Milk Tea": "/menu/classic-milk-tea.webp",
+  "Thai Milk Tea": "/menu/thai-milk-tea.webp",
+  "Roasted Oolong Milk Tea": "/menu/roasted-oolong-milk-tea.webp",
+  "Ube Milk Tea": "/menu/ube-milk-tea.webp",
+  "Pistachio Milk Tea": "/menu/pistachio-milk-tea.webp",
+  "Horchata Milk Tea": "/menu/horchata-milk-tea.webp",
+  "Mango Milk Tea": "/menu/mango-milk-tea.webp",
+  "Honeydew Milk Tea": "/menu/honeydew-milk-tea.webp",
+  "Matcha Latte": "/menu/matcha-latte.webp",
+  "Strawberry Matcha Latte": "/menu/strawberry-matcha-latte.webp",
+  "Mango Matcha Latte": "/menu/mango-matcha-latte.webp",
+  "Coconut Matcha": "/menu/coconut-matcha.webp",
+  "Sea Salt Jasmine Tea": "/menu/sea-salt-jasmine-tea.webp",
+  "Peach Oolong Tea": "/menu/peach-oolong-tea.webp",
+  "Strawberry Passionfruit Tea": "/menu/strawberry-passionfruit-tea.webp",
+  "Grapefruit Tea": "/menu/grapefruit-tea.webp",
+  "Mango Sago Coconut Milk": "/menu/mango-sago-coconut-milk.webp",
+  "Avocado Smoothie": "/menu/avocado-smoothie.webp",
+  "Ube Smoothie": "/menu/ube-smoothie.webp",
+  "Matcha Smoothie": "/menu/matcha-smoothie.webp",
 };
 
-// Helper function to get image for a menu item
+export const toppingImageMap: Record<string, string> = {
+  "Honey Boba": "/toppings/honey-boba.webp",
+  "Jelly": "/toppings/jelly.webp",
+  "Sea Salt Cream": "/toppings/sea-salt-cream.webp",
+  "Ube Cream": "/toppings/ube-cream.webp",
+  "Matcha Cream": "/toppings/matcha-cream.webp",
+  "Egg Cream": "/toppings/egg-cream.webp",
+};
+
 export const getMenuImage = (itemName: string): string | undefined => {
   return menuImageMap[itemName];
 };
 
-// Map topping names to their corresponding images
-export const toppingImageMap: Record<string, string> = {
-  'Honey Boba': HoneyBoba,
-  'Jelly': Jelly,
-  'Sea Salt Cream': SeaSaltCreamTopping,
-  'Ube Cream': UbeCreamTopping,
-  'Matcha Cream': MatchaCreamTopping,
-  'Egg Cream': EggCreamTopping,
-};
-
-// Helper function to get image for a topping
 export const getToppingImage = (toppingName: string): string | undefined => {
   return toppingImageMap[toppingName];
 };
+
+/** Prefer local optimized card image; fall back to Supabase URL. */
+export function resolveMenuCardImage(
+  name: string,
+  remoteUrl?: string | null,
+): string {
+  return getMenuImage(name) || (remoteUrl ?? "").trim();
+}
+
+export function resolveToppingCardImage(
+  name: string,
+  remoteUrl?: string | null,
+): string {
+  return getToppingImage(name) || (remoteUrl ?? "").trim();
+}

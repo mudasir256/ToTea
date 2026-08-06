@@ -8,7 +8,6 @@ type CheckoutItem = {
   toppingIds?: string[];
   sweetness?: string;
   ice?: string;
-  milk?: string;
 };
 
 type CheckoutBody = {
@@ -217,7 +216,6 @@ serve(async (req) => {
       size: string;
       sweetness?: string;
       ice?: string;
-      milk?: string;
       base_price: number;
       toppings: Array<{ id: string; name: string; category: string; price: number }>;
       topping_total: number;
@@ -310,7 +308,6 @@ serve(async (req) => {
         size: variant.size,
         sweetness: line.sweetness?.trim() || undefined,
         ice: line.ice?.trim() || undefined,
-        milk: line.milk?.trim() || undefined,
         base_price: dollarsFromCents(baseCents),
         toppings: pricedToppings.map((topping) => ({
           id: topping.id,
@@ -352,7 +349,6 @@ serve(async (req) => {
             item.size,
             item.sweetness ? `Sweet ${item.sweetness}` : null,
             item.ice,
-            item.milk,
             ...item.toppings.map((topping) => topping.name),
           ]
             .filter(Boolean)
@@ -458,6 +454,8 @@ serve(async (req) => {
         name: item.name,
         image_url: item.image_url,
         size: item.size,
+        sweetness: item.sweetness || null,
+        ice: item.ice || null,
         base_price: item.base_price,
         toppings: item.toppings,
         topping_total: item.topping_total,

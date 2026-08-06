@@ -2,13 +2,15 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Check, Loader2, Minus, Plus, X } from "lucide-react";
 import { formatMoney } from "@/lib/money";
 import { availableQuantity } from "@/lib/menuStock";
+import { resolveMenuCardImage } from "@/lib/menuImages";
 import { useDrinkCustomization } from "@/features/menu/useDrinkCustomization";
-import {
-  ICE_LEVELS,
-  MILK_OPTIONS,
-  SWEETNESS_LEVELS,
-} from "@/features/menu/drinkOptions";
-import type { MenuItemWithVariants, MenuStockAvailability, MenuTopping } from "@/types/database";
+import type {
+  MenuItemOptionSettings,
+  MenuItemWithVariants,
+  MenuOptionLevel,
+  MenuStockAvailability,
+  MenuTopping,
+} from "@/types/database";
 
 const MAX_QUANTITY = 25;
 
@@ -16,6 +18,8 @@ type Props = {
   item: MenuItemWithVariants | null;
   toppings: MenuTopping[];
   stock: MenuStockAvailability[];
+  optionLevels: MenuOptionLevel[];
+  itemSettings?: MenuItemOptionSettings | null;
   onClose: () => void;
 };
 
@@ -109,7 +113,8 @@ function ToppingRow({
         className="flex w-full items-center gap-3 py-3.5 text-left disabled:cursor-not-allowed disabled:opacity-45"
       >
         <span
-          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
+          aria-hidden
+          className={`order-first flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border transition-colors ${
             selected
               ? "border-accent bg-accent text-white"
               : "border-border bg-white text-transparent"
@@ -135,18 +140,25 @@ function ToppingRow({
   );
 }
 
-export function DrinkCustomizeModal({ item, toppings, stock, onClose }: Props) {
+export function DrinkCustomizeModal({
+  item,
+  toppings,
+  stock,
+  optionLevels,
+  itemSettings = null,
+  onClose,
+}: Props) {
   const {
     stock: liveStock,
     sizes,
+    sugarLevels,
+    iceLevels,
     selectedSize,
     setSelectedSize,
     selectedSweetness,
     setSelectedSweetness,
     selectedIce,
     setSelectedIce,
-    selectedMilk,
-    setSelectedMilk,
     selectedCreamId,
     selectCream,
     selectedStandardIds,
@@ -164,7 +176,7 @@ export function DrinkCustomizeModal({ item, toppings, stock, onClose }: Props) {
     hasAvailableSize,
     priceForSize,
     addToCart,
-  } = useDrinkCustomization(item, toppings, stock);
+  } = useDrinkCustomization(item, toppings, stock, optionLevels, itemSettings);
 
   const quantityLimit = Math.min(MAX_QUANTITY, Math.max(0, selectedQuantity));
   const runningTotalCents = totalUnitPriceCents * quantity;
@@ -189,8 +201,12 @@ export function DrinkCustomizeModal({ item, toppings, stock, onClose }: Props) {
               <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
                 <div className="relative shrink-0 sm:w-[42%]">
                   <img
-                    src={item.image_url}
+                    src={resolveMenuCardImage(item.name, item.image_url)}
                     alt={item.name}
+                    width={480}
+                    height={360}
+                    decoding="async"
+                    fetchPriority="high"
                     className={`h-44 w-full object-cover sm:h-full sm:rounded-l-[28px] ${
                       hasAvailableSize ? "" : "saturate-[0.55] brightness-[0.9]"
                     }`}
@@ -245,8 +261,8 @@ export function DrinkCustomizeModal({ item, toppings, stock, onClose }: Props) {
                       </OptionGroup>
                     ) : null}
 
-                    <OptionGroup label="Sweetness level">
-                      {SWEETNESS_LEVELS.map((level) => (
+                    <OptionGroup label="Sugar Level">
+                      {sugarLevels.map((level) => (
                         <OptionPill
                           key={level}
                           selected={selectedSweetness === level}
@@ -257,26 +273,14 @@ export function DrinkCustomizeModal({ item, toppings, stock, onClose }: Props) {
                       ))}
                     </OptionGroup>
 
-                    <OptionGroup label="Ice level">
-                      {ICE_LEVELS.map((level) => (
+                    <OptionGroup label="Ice Level">
+                      {iceLevels.map((level) => (
                         <OptionPill
                           key={level}
                           selected={selectedIce === level}
                           onSelect={() => setSelectedIce(level)}
                         >
                           {level}
-                        </OptionPill>
-                      ))}
-                    </OptionGroup>
-
-                    <OptionGroup label="Milk option">
-                      {MILK_OPTIONS.map((option) => (
-                        <OptionPill
-                          key={option}
-                          selected={selectedMilk === option}
-                          onSelect={() => setSelectedMilk(option)}
-                        >
-                          {option}
                         </OptionPill>
                       ))}
                     </OptionGroup>

@@ -106,6 +106,27 @@ export type MenuTopping = {
   updated_at: string;
 };
 
+export type MenuOptionLevel = {
+  id: string;
+  kind: "sugar" | "ice";
+  name: string;
+  sort_order: number;
+  is_default: boolean;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type MenuItemOptionSettings = {
+  menu_item_id: string;
+  sugar_enabled: boolean;
+  ice_enabled: boolean;
+  standard_toppings_enabled: boolean;
+  cream_toppings_enabled: boolean;
+  default_sugar_level_id: string | null;
+  default_ice_level_id: string | null;
+};
+
 export type Review = {
   id: string;
   reviewer_name: string;
@@ -119,6 +140,8 @@ export type OrderItemSnapshot = {
   name: string;
   image_url: string;
   size: string;
+  sweetness?: string | null;
+  ice?: string | null;
   base_price?: number;
   toppings?: Array<{
     id: string;

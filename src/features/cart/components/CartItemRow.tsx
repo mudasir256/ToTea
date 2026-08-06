@@ -15,7 +15,6 @@ function itemMeta(item: LocalCartItem) {
   return [
     item.selected_options.sweetness,
     item.selected_options.ice,
-    item.selected_options.milk,
     ...toppings.map((topping) => topping.name),
     item.quantity > 1 ? `×${item.quantity}` : null,
   ]

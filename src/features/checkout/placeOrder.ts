@@ -49,7 +49,6 @@ export async function placeSquareOrder(input: PlaceOrderInput): Promise<string> 
     toppingIds: (item.selected_options.toppings ?? []).map((topping) => topping.id),
     sweetness: item.selected_options.sweetness,
     ice: item.selected_options.ice,
-    milk: item.selected_options.milk,
   }));
 
   if (checkoutItems.some((item) => !UUID_PATTERN.test(item.menuItemId))) {

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { ScrollLink } from "@/components/ScrollLink";
 import { menuItemHasStock } from "@/lib/menuStock";
+import { resolveMenuCardImage } from "@/lib/menuImages";
 import { getSupabase } from "@/lib/supabase";
 import type {
   MenuCategory,
@@ -136,8 +137,13 @@ export const FeaturedProducts = () => {
                   <ScrollLink to={`/product/${encodeURIComponent(product.name)}`}>
                     <article className="relative h-80 overflow-hidden rounded-4xl border border-border bg-card transition-all duration-500 hover:border-accent/30 hover:shadow-elevated">
                       <img
-                        src={product.image_url}
+                        src={resolveMenuCardImage(product.name, product.image_url)}
                         alt={product.name}
+                        width={480}
+                        height={360}
+                        loading="eager"
+                        decoding="async"
+                        fetchPriority="high"
                         className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />

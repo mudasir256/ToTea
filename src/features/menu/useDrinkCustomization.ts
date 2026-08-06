@@ -9,15 +9,19 @@ import {
 } from "@/features/cart/CartProvider";
 import {
   DEFAULT_ICE,
-  DEFAULT_MILK,
   DEFAULT_SWEETNESS,
+  defaultLevelName,
   drinkIncludesFreeTopping,
+  iceLevelNames,
   MAX_STANDARD_TOPPINGS_DEFAULT,
   MAX_STANDARD_TOPPINGS_MILK_TEA,
+  sugarLevelNames,
 } from "@/features/menu/drinkOptions";
 import type {
+  MenuItemOptionSettings,
   MenuItemVariant,
   MenuItemWithVariants,
+  MenuOptionLevel,
   MenuStockAvailability,
   MenuTopping,
 } from "@/types/database";
@@ -51,12 +55,29 @@ const toSelection = (topping: MenuTopping): CartToppingSelection => ({
 
 type AddItem = ReturnType<typeof useCart>["addItem"];
 
+function defaultsForItem(
+  item: MenuItemWithVariants,
+  optionLevels: MenuOptionLevel[],
+  itemSettings?: MenuItemOptionSettings | null,
+) {
+  return {
+    sweetness: defaultLevelName(
+      optionLevels,
+      "sugar",
+      itemSettings?.default_sugar_level_id,
+    ),
+    ice: defaultLevelName(optionLevels, "ice", itemSettings?.default_ice_level_id),
+  };
+}
+
 /**
- * Quick "+ Add" path: cheapest available size, default sweetness/ice/milk, no toppings.
+ * Quick "+ Add" path: cheapest available size, default sweetness/ice, no toppings.
  */
 export async function addDefaultToCart(
   item: MenuItemWithVariants,
   addItem: AddItem,
+  optionLevels: MenuOptionLevel[] = [],
+  itemSettings?: MenuItemOptionSettings | null,
 ): Promise<void> {
   const supabase = getSupabase();
   if (!supabase) {
@@ -75,20 +96,17 @@ export async function addDefaultToCart(
       return;
     }
 
+    const defaults = defaultsForItem(item, optionLevels, itemSettings);
+
     await addItem({
       product_id: item.id,
-      product_variant_id: buildCartVariantId(item.id, variant.size, [], {
-        sweetness: DEFAULT_SWEETNESS,
-        ice: DEFAULT_ICE,
-        milk: DEFAULT_MILK,
-      }),
+      product_variant_id: buildCartVariantId(item.id, variant.size, [], defaults),
       product_name: item.name,
       product_image: item.image_url,
       selected_options: {
         size: variant.size,
-        sweetness: DEFAULT_SWEETNESS,
-        ice: DEFAULT_ICE,
-        milk: DEFAULT_MILK,
+        sweetness: defaults.sweetness,
+        ice: defaults.ice,
         toppings: [],
       },
       unit_price_cents: Math.round(Number(variant.price) * 100),
@@ -102,19 +120,20 @@ export async function addDefaultToCart(
 }
 
 /**
- * Size, sweetness, ice, milk, and topping selection with live pricing + stock check.
+ * Size, sweetness, ice, and topping selection with live pricing + stock check.
  */
 export function useDrinkCustomization(
   item: MenuItemWithVariants | null,
   toppings: MenuTopping[],
   initialStock: MenuStockAvailability[],
+  optionLevels: MenuOptionLevel[] = [],
+  itemSettings?: MenuItemOptionSettings | null,
 ) {
   const { addItem } = useCart();
   const [stock, setStock] = useState<MenuStockAvailability[]>(initialStock);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedSweetness, setSelectedSweetness] = useState(DEFAULT_SWEETNESS);
   const [selectedIce, setSelectedIce] = useState(DEFAULT_ICE);
-  const [selectedMilk, setSelectedMilk] = useState(DEFAULT_MILK);
   const [selectedCreamId, setSelectedCreamId] = useState<string | null>(null);
   const [selectedStandardIds, setSelectedStandardIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
@@ -122,14 +141,22 @@ export function useDrinkCustomization(
 
   const variants = useMemo(() => (item ? variantsFor(item) : []), [item]);
   const sizes = useMemo(() => variants.map((variant) => variant.size), [variants]);
+  const sugarLevels = useMemo(() => sugarLevelNames(optionLevels), [optionLevels]);
+  const iceLevels = useMemo(() => iceLevelNames(optionLevels), [optionLevels]);
 
   const creamToppings = useMemo(
-    () => toppings.filter((topping) => topping.category === "cream"),
-    [toppings],
+    () =>
+      itemSettings?.cream_toppings_enabled === false
+        ? []
+        : toppings.filter((topping) => topping.category === "cream"),
+    [toppings, itemSettings?.cream_toppings_enabled],
   );
   const standardToppings = useMemo(
-    () => toppings.filter((topping) => topping.category === "standard"),
-    [toppings],
+    () =>
+      itemSettings?.standard_toppings_enabled === false
+        ? []
+        : toppings.filter((topping) => topping.category === "standard"),
+    [toppings, itemSettings?.standard_toppings_enabled],
   );
 
   const toppingGroups = useMemo(
@@ -145,20 +172,22 @@ export function useDrinkCustomization(
     setStock(initialStock);
     setSelectedCreamId(null);
     setSelectedStandardIds([]);
-    setSelectedSweetness(DEFAULT_SWEETNESS);
-    setSelectedIce(DEFAULT_ICE);
-    setSelectedMilk(DEFAULT_MILK);
     setQuantity(1);
     if (!item) {
       setSelectedSize("");
+      setSelectedSweetness(DEFAULT_SWEETNESS);
+      setSelectedIce(DEFAULT_ICE);
       return;
     }
+    const defaults = defaultsForItem(item, optionLevels, itemSettings);
+    setSelectedSweetness(defaults.sweetness);
+    setSelectedIce(defaults.ice);
     setSelectedSize(
       variantsFor(item)
         .map((variant) => variant.size)
         .find((size) => availableQuantity(initialStock, item.id, size) > 0) ?? "",
     );
-  }, [item, initialStock]);
+  }, [item, initialStock, optionLevels, itemSettings]);
 
   const includesFreeTopping = Boolean(item && drinkIncludesFreeTopping(item.name));
   const maxStandardToppings = includesFreeTopping
@@ -286,7 +315,6 @@ export function useDrinkCustomization(
         product_variant_id: buildCartVariantId(item.id, selectedSize, selectedToppings, {
           sweetness: selectedSweetness,
           ice: selectedIce,
-          milk: selectedMilk,
         }),
         product_name: item.name,
         product_image: item.image_url,
@@ -294,7 +322,6 @@ export function useDrinkCustomization(
           size: selectedSize,
           sweetness: selectedSweetness,
           ice: selectedIce,
-          milk: selectedMilk,
           toppings: selectedToppings,
         },
         unit_price_cents: totalUnitPriceCents,
@@ -314,14 +341,14 @@ export function useDrinkCustomization(
   return {
     stock,
     sizes,
+    sugarLevels,
+    iceLevels,
     selectedSize,
     setSelectedSize,
     selectedSweetness,
     setSelectedSweetness,
     selectedIce,
     setSelectedIce,
-    selectedMilk,
-    setSelectedMilk,
     selectedCreamId,
     selectCream,
     selectedStandardIds,

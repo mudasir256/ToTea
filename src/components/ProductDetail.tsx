@@ -6,7 +6,13 @@ import { formatMoney } from "@/lib/money";
 import { availableQuantity, fetchMenuStock } from "@/lib/menuStock";
 import { useDrinkCustomization } from "@/features/menu/useDrinkCustomization";
 import { getSupabase } from "@/lib/supabase";
-import type { MenuItemWithVariants, MenuStockAvailability, MenuTopping } from "@/types/database";
+import type {
+  MenuItemOptionSettings,
+  MenuItemWithVariants,
+  MenuOptionLevel,
+  MenuStockAvailability,
+  MenuTopping,
+} from "@/types/database";
 import NotFound from "@/pages/NotFound";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +22,8 @@ export const ProductDetail = () => {
   const [item, setItem] = useState<MenuItemWithVariants | null>(null);
   const [initialStock, setInitialStock] = useState<MenuStockAvailability[]>([]);
   const [toppings, setToppings] = useState<MenuTopping[]>([]);
+  const [optionLevels, setOptionLevels] = useState<MenuOptionLevel[]>([]);
+  const [itemSettings, setItemSettings] = useState<MenuItemOptionSettings | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -24,8 +32,14 @@ export const ProductDetail = () => {
   const {
     stock,
     sizes,
+    sugarLevels,
+    iceLevels,
     selectedSize,
     setSelectedSize,
+    selectedSweetness,
+    setSelectedSweetness,
+    selectedIce,
+    setSelectedIce,
     selectedToppingIds,
     toggleTopping,
     toppingGroups,
@@ -36,7 +50,7 @@ export const ProductDetail = () => {
     hasAvailableSize,
     priceForSize,
     addToCart,
-  } = useDrinkCustomization(item, toppings, initialStock);
+  } = useDrinkCustomization(item, toppings, initialStock, optionLevels, itemSettings);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,7 +68,7 @@ export const ProductDetail = () => {
         return;
       }
 
-      const [itemResult, toppingResult] = await Promise.all([
+      const [itemResult, toppingResult, levelResult] = await Promise.all([
         supabase
           .from("menu_items")
           .select("*, menu_item_variants(*)")
@@ -65,6 +79,11 @@ export const ProductDetail = () => {
           .from("menu_toppings")
           .select("*")
           .eq("is_available", true)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("menu_option_levels")
+          .select("id, kind, name, sort_order, is_default, is_active")
+          .eq("is_active", true)
           .order("sort_order", { ascending: true }),
       ]);
 
@@ -80,13 +99,25 @@ export const ProductDetail = () => {
       if (toppingResult.error) {
         console.error("Unable to load toppings", toppingResult.error);
       }
+      if (levelResult.error) {
+        console.error("Unable to load sugar/ice levels", levelResult.error);
+      }
 
-      const { data: category } = await supabase
-        .from("menu_categories")
-        .select("name")
-        .eq("id", menuItem.category_id)
-        .eq("is_active", true)
-        .maybeSingle();
+      const [{ data: category }, settingsResult] = await Promise.all([
+        supabase
+          .from("menu_categories")
+          .select("name")
+          .eq("id", menuItem.category_id)
+          .eq("is_active", true)
+          .maybeSingle(),
+        supabase
+          .from("menu_item_option_settings")
+          .select(
+            "menu_item_id, sugar_enabled, ice_enabled, standard_toppings_enabled, cream_toppings_enabled, default_sugar_level_id, default_ice_level_id",
+          )
+          .eq("menu_item_id", menuItem.id)
+          .maybeSingle(),
+      ]);
 
       let currentStock: MenuStockAvailability[] = [];
       try {
@@ -100,6 +131,8 @@ export const ProductDetail = () => {
       setItem(menuItem);
       setInitialStock(currentStock);
       setToppings((toppingResult.data ?? []) as MenuTopping[]);
+      setOptionLevels((levelResult.data ?? []) as MenuOptionLevel[]);
+      setItemSettings((settingsResult.data as MenuItemOptionSettings | null) ?? null);
       setCategoryName((category as { name?: string } | null)?.name ?? "ToTea menu");
       setLoading(false);
     }
@@ -256,6 +289,48 @@ export const ProductDetail = () => {
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              <div className="mt-11">
+                <h3 className="mb-4 font-serif text-lg text-foreground">Sugar Level</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  {sugarLevels.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setSelectedSweetness(level)}
+                      aria-pressed={selectedSweetness === level}
+                      className={`rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${
+                        selectedSweetness === level
+                          ? "bg-accent text-white"
+                          : "bg-[#f3ebe1] text-foreground hover:bg-[#ebe0d2]"
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-8">
+                <h3 className="mb-4 font-serif text-lg text-foreground">Ice Level</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  {iceLevels.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setSelectedIce(level)}
+                      aria-pressed={selectedIce === level}
+                      className={`rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${
+                        selectedIce === level
+                          ? "bg-accent text-white"
+                          : "bg-[#f3ebe1] text-foreground hover:bg-[#ebe0d2]"
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  ))}
                 </div>
               </div>
 

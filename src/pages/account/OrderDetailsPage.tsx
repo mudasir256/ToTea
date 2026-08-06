@@ -152,8 +152,15 @@ export default function OrderDetailsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{item.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      Size: {item.size} · Qty {item.quantity} ·{" "}
-                      {formatOrderMoney(item.unit_price)} each
+                      {[
+                        `Size: ${item.size}`,
+                        item.sweetness ? `Sugar: ${item.sweetness}` : null,
+                        item.ice ? `Ice: ${item.ice}` : null,
+                        `Qty ${item.quantity}`,
+                        `${formatOrderMoney(item.unit_price)} each`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                     {item.toppings && item.toppings.length > 0 ? (
                       <p className="mt-1 text-sm text-muted-foreground">

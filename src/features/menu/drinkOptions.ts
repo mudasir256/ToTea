@@ -1,11 +1,24 @@
-/** Matches the paper menu / design-spec customization levels. */
-export const SWEETNESS_LEVELS = ["0%", "30%", "50%", "70%", "100%"] as const;
-export const ICE_LEVELS = ["No ice", "Less ice", "Normal ice", "More ice"] as const;
-export const MILK_OPTIONS = ["Fresh whole milk", "Condensed milk"] as const;
+import type { MenuOptionLevel } from "@/types/database";
 
-export const DEFAULT_SWEETNESS = "100%";
-export const DEFAULT_ICE = "Normal ice";
-export const DEFAULT_MILK = "Fresh whole milk";
+/** Fallback if option levels fail to load from Supabase. */
+export const FALLBACK_SUGAR_LEVELS = [
+  "Less Sugar",
+  "Light Sugar",
+  "Minimal Sugar",
+  "No Added",
+  "Super Sweet",
+  "normal",
+] as const;
+
+export const FALLBACK_ICE_LEVELS = [
+  "No Ice",
+  "Less Ice",
+  "Normal Ice",
+  "More Ice",
+] as const;
+
+export const DEFAULT_SWEETNESS = "Less Sugar";
+export const DEFAULT_ICE = "Normal Ice";
 
 /** Milk tea includes 1 free standard topping; other categories charge for all. */
 export function drinkIncludesFreeTopping(itemName: string): boolean {
@@ -14,3 +27,38 @@ export function drinkIncludesFreeTopping(itemName: string): boolean {
 
 export const MAX_STANDARD_TOPPINGS_MILK_TEA = 3; // 1 free + 2 additional
 export const MAX_STANDARD_TOPPINGS_DEFAULT = 2;
+
+export function levelsOfKind(
+  levels: MenuOptionLevel[],
+  kind: "sugar" | "ice",
+): MenuOptionLevel[] {
+  return levels
+    .filter((level) => level.kind === kind && level.is_active)
+    .sort((left, right) => left.sort_order - right.sort_order);
+}
+
+export function defaultLevelName(
+  levels: MenuOptionLevel[],
+  kind: "sugar" | "ice",
+  preferredId?: string | null,
+): string {
+  const active = levelsOfKind(levels, kind);
+  if (preferredId) {
+    const preferred = active.find((level) => level.id === preferredId);
+    if (preferred) return preferred.name;
+  }
+  const markedDefault = active.find((level) => level.is_default);
+  if (markedDefault) return markedDefault.name;
+  if (active[0]) return active[0].name;
+  return kind === "sugar" ? DEFAULT_SWEETNESS : DEFAULT_ICE;
+}
+
+export function sugarLevelNames(levels: MenuOptionLevel[]): string[] {
+  const names = levelsOfKind(levels, "sugar").map((level) => level.name);
+  return names.length > 0 ? names : [...FALLBACK_SUGAR_LEVELS];
+}
+
+export function iceLevelNames(levels: MenuOptionLevel[]): string[] {
+  const names = levelsOfKind(levels, "ice").map((level) => level.name);
+  return names.length > 0 ? names : [...FALLBACK_ICE_LEVELS];
+}

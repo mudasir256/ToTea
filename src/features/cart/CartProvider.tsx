@@ -27,7 +27,6 @@ export type CartDrinkOptions = {
   size: string;
   sweetness?: string;
   ice?: string;
-  milk?: string;
   toppings?: CartToppingSelection[];
 };
 
@@ -48,13 +47,12 @@ export function buildCartVariantId(
   productId: string,
   sizeLabel: string,
   toppings: CartToppingSelection[] = [],
-  extras: { sweetness?: string; ice?: string; milk?: string } = {},
+  extras: { sweetness?: string; ice?: string } = {},
 ): string {
   const sizeKey = sizeLabel.toLowerCase();
   const parts = [`${productId}:${sizeKey}`];
   if (extras.sweetness) parts.push(`sweet:${extras.sweetness.toLowerCase()}`);
   if (extras.ice) parts.push(`ice:${extras.ice.toLowerCase()}`);
-  if (extras.milk) parts.push(`milk:${extras.milk.toLowerCase()}`);
   if (toppings.length > 0) {
     const toppingKey = [...toppings]
       .map((topping) => topping.id)

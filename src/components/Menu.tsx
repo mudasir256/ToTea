@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2, Plus, Search } from "lucide-react";
+import { MenuCardImage } from "@/components/MenuCardImage";
 import { DrinkCustomizeModal } from "@/features/menu/components/DrinkCustomizeModal";
 import { addDefaultToCart } from "@/features/menu/useDrinkCustomization";
 import { badgeFor, chipsFor } from "@/features/menu/badges";
@@ -9,7 +10,16 @@ import { useCart } from "@/features/cart/CartProvider";
 import { getSupabase } from "@/lib/supabase";
 import { menuItemHasStock } from "@/lib/menuStock";
 import { formatMoney } from "@/lib/money";
-import type { MenuCategory, MenuItemWithVariants, MenuStockAvailability, MenuTopping } from "@/types/database";
+import { preloadMenuImages } from "@/lib/menuImageUrl";
+import { resolveMenuCardImage, resolveToppingCardImage } from "@/lib/menuImages";
+import type {
+  MenuCategory,
+  MenuItemOptionSettings,
+  MenuItemWithVariants,
+  MenuOptionLevel,
+  MenuStockAvailability,
+  MenuTopping,
+} from "@/types/database";
 
 const EXTRAS_PATTERN = /gelato|snack|sauce|topping|food|extra|ice cream/i;
 
@@ -43,9 +53,14 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
   const [categories, setCategories] = useState<MenuCategoryWithItems[]>([]);
   const [toppings, setToppings] = useState<MenuTopping[]>([]);
   const [stock, setStock] = useState<MenuStockAvailability[]>([]);
+  const [optionLevels, setOptionLevels] = useState<MenuOptionLevel[]>([]);
+  const [itemOptionSettings, setItemOptionSettings] = useState<
+    Record<string, MenuItemOptionSettings>
+  >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeCategoryId, setActiveCategoryId] = useState<string>(ALL_TAB);
+  /** Start on the first category so only ~3–8 images compete on first paint. */
+  const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [query, setQuery] = useState("");
   const [addingId, setAddingId] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<MenuItemWithVariants | null>(null);
@@ -61,7 +76,14 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         return;
       }
 
-      const [categoryResult, itemResult, toppingResult, stockResult] = await Promise.all([
+      const [
+        categoryResult,
+        itemResult,
+        toppingResult,
+        stockResult,
+        levelResult,
+        settingsResult,
+      ] = await Promise.all([
         supabase
           .from("menu_categories")
           .select("*")
@@ -80,6 +102,16 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         supabase.rpc("get_public_menu_stock", {
           p_menu_item_id: null,
         }),
+        supabase
+          .from("menu_option_levels")
+          .select("id, kind, name, sort_order, is_default, is_active")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("menu_item_option_settings")
+          .select(
+            "menu_item_id, sugar_enabled, ice_enabled, standard_toppings_enabled, cream_toppings_enabled, default_sugar_level_id, default_ice_level_id",
+          ),
       ]);
 
       if (cancelled) return;
@@ -95,6 +127,13 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         return;
       }
 
+      if (levelResult.error) {
+        console.error("Unable to load sugar/ice levels", levelResult.error);
+      }
+      if (settingsResult.error) {
+        console.error("Unable to load item option settings", settingsResult.error);
+      }
+
       const items = (itemResult.data ?? []) as MenuItemWithVariants[];
       const grouped = ((categoryResult.data ?? []) as MenuCategory[])
         .map((category) => ({
@@ -103,9 +142,27 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         }))
         .filter((category) => category.items.length > 0);
 
+      const settingsMap: Record<string, MenuItemOptionSettings> = {};
+      for (const row of (settingsResult.data ?? []) as MenuItemOptionSettings[]) {
+        settingsMap[row.menu_item_id] = row;
+      }
+
       setCategories(grouped);
       setToppings((toppingResult.data ?? []) as MenuTopping[]);
       setStock((stockResult.data ?? []) as MenuStockAvailability[]);
+      setOptionLevels((levelResult.data ?? []) as MenuOptionLevel[]);
+      setItemOptionSettings(settingsMap);
+      setActiveCategoryId((current) => {
+        if (current && current !== ALL_TAB && grouped.some((category) => category.id === current)) {
+          return current;
+        }
+        return grouped[0]?.id ?? ALL_TAB;
+      });
+      const firstCategoryItems = grouped[0]?.items ?? items.slice(0, 6);
+      preloadMenuImages(
+        firstCategoryItems.map((item) => resolveMenuCardImage(item.name, item.image_url)),
+        8,
+      );
       setLoading(false);
     }
 
@@ -142,9 +199,19 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
     [categories],
   );
 
-  const activeCategory = categories.find((category) => category.id === activeCategoryId);
-  const showingAll = !trimmedQuery && activeCategoryId === ALL_TAB;
-  const showingExtras = !trimmedQuery && activeCategoryId === "extras";
+  const resolvedActiveCategoryId =
+    activeCategoryId || categories[0]?.id || ALL_TAB;
+  const activeCategory = categories.find((category) => category.id === resolvedActiveCategoryId);
+  const showingAll = !trimmedQuery && resolvedActiveCategoryId === ALL_TAB;
+  const showingExtras = !trimmedQuery && resolvedActiveCategoryId === "extras";
+
+  useEffect(() => {
+    if (!activeCategory || trimmedQuery || showingAll || showingExtras) return;
+    preloadMenuImages(
+      activeCategory.items.map((item) => resolveMenuCardImage(item.name, item.image_url)),
+      8,
+    );
+  }, [activeCategory, trimmedQuery, showingAll, showingExtras]);
 
   const visibleSections = useMemo(() => {
     if (trimmedQuery) {
@@ -173,7 +240,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
   const handleQuickAdd = async (item: MenuItemWithVariants) => {
     setAddingId(item.id);
     try {
-      await addDefaultToCart(item, addItem);
+      await addDefaultToCart(item, addItem, optionLevels, itemOptionSettings[item.id] ?? null);
     } finally {
       setAddingId(null);
     }
@@ -192,15 +259,16 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
     const inStock = menuItemHasStock(stock, item.id);
     const badge = badgeFor(item.name);
     const chips = chipsFor(item.allergens, sizeCount(item));
+    const priority = index < 6;
 
     return (
       <motion.article
         key={item.id}
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.4, delay: Math.min(index, 8) * 0.03 }}
-        className="group flex flex-col overflow-hidden rounded-[14px] border border-border bg-white transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(74,54,38,0.1)]"
+        viewport={{ once: true, margin: "80px 0px" }}
+        transition={{ duration: 0.25, delay: Math.min(index, 4) * 0.02 }}
+        className="group flex flex-col overflow-hidden rounded-[14px] border border-border bg-white transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(74,54,38,0.1)] [content-visibility:auto] [contain-intrinsic-size:320px]"
       >
         <Link
           to={`/product/${encodeURIComponent(item.name)}`}
@@ -218,19 +286,19 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
             inStock ? "" : "cursor-not-allowed"
           }`}
         >
-          <div className="relative h-[180px] overflow-hidden">
-            <img
-              src={item.image_url}
+          <div className="relative">
+            <MenuCardImage
+              src={resolveMenuCardImage(item.name, item.image_url)}
               alt={item.name}
-              loading="lazy"
-              className={`h-full w-full object-cover ${inStock ? "" : "saturate-[0.5] brightness-[0.92]"}`}
+              priority={priority}
+              imgClassName={inStock ? "" : "saturate-[0.5] brightness-[0.92]"}
             />
             {!inStock ? (
-              <span className="absolute left-2.5 top-2.5 z-[2] rounded-xl bg-white/92 px-2.5 py-0.5 text-[10px] font-bold uppercase text-destructive">
+              <span className="absolute left-2.5 top-2.5 z-10 rounded-md bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.04em] text-destructive shadow-[0_1px_3px_rgba(42,31,22,0.18)]">
                 Sold out
               </span>
             ) : badge ? (
-              <span className="absolute left-2.5 top-2.5 z-[2] rounded-xl bg-white/92 px-2.5 py-0.5 text-[10px] font-bold uppercase text-accent-hover">
+              <span className="absolute left-2.5 top-2.5 z-10 whitespace-nowrap rounded-md bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.04em] text-accent-hover shadow-[0_1px_3px_rgba(42,31,22,0.18)]">
                 {badge}
               </span>
             ) : null}
@@ -356,7 +424,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                   All
                 </button>
                 {primaryCategories.map((tab) => {
-                  const isActive = !trimmedQuery && tab.id === activeCategoryId;
+                  const isActive = !trimmedQuery && tab.id === resolvedActiveCategoryId;
                   return (
                     <button
                       key={tab.id}
@@ -437,14 +505,11 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                         key={topping.id}
                         className="overflow-hidden rounded-[14px] border border-border bg-white"
                       >
-                        <div className="h-[180px] overflow-hidden">
-                          <img
-                            src={topping.image_url}
-                            alt={topping.name}
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
+                        <MenuCardImage
+                          src={resolveToppingCardImage(topping.name, topping.image_url)}
+                          alt={topping.name}
+                          priority={index < 3}
+                        />
                         <div className="flex items-center justify-between gap-2 px-[15px] py-[13px]">
                           <span className="text-[14px] font-semibold">{topping.name}</span>
                           {Number(topping.price) > 0 ? (
@@ -479,6 +544,8 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         item={activeItem}
         toppings={toppings}
         stock={stock}
+        optionLevels={optionLevels}
+        itemSettings={activeItem ? itemOptionSettings[activeItem.id] ?? null : null}
         onClose={() => setActiveItem(null)}
       />
     </section>
