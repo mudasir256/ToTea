@@ -20,6 +20,7 @@ type Props = {
   stock: MenuStockAvailability[];
   optionLevels: MenuOptionLevel[];
   itemSettings?: MenuItemOptionSettings | null;
+  allowedToppingIds?: string[] | null;
   onClose: () => void;
 };
 
@@ -146,6 +147,7 @@ export function DrinkCustomizeModal({
   stock,
   optionLevels,
   itemSettings = null,
+  allowedToppingIds = null,
   onClose,
 }: Props) {
   const {
@@ -176,7 +178,14 @@ export function DrinkCustomizeModal({
     hasAvailableSize,
     priceForSize,
     addToCart,
-  } = useDrinkCustomization(item, toppings, stock, optionLevels, itemSettings);
+  } = useDrinkCustomization(
+    item,
+    toppings,
+    stock,
+    optionLevels,
+    itemSettings,
+    allowedToppingIds,
+  );
 
   const quantityLimit = Math.min(MAX_QUANTITY, Math.max(0, selectedQuantity));
   const runningTotalCents = totalUnitPriceCents * quantity;

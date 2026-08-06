@@ -57,6 +57,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
   const [itemOptionSettings, setItemOptionSettings] = useState<
     Record<string, MenuItemOptionSettings>
   >({});
+  const [itemToppingIds, setItemToppingIds] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   /** Start on the first category so only ~3–8 images compete on first paint. */
@@ -83,6 +84,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         stockResult,
         levelResult,
         settingsResult,
+        itemToppingsResult,
       ] = await Promise.all([
         supabase
           .from("menu_categories")
@@ -112,6 +114,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
           .select(
             "menu_item_id, sugar_enabled, ice_enabled, standard_toppings_enabled, cream_toppings_enabled, default_sugar_level_id, default_ice_level_id",
           ),
+        supabase.from("menu_item_toppings").select("menu_item_id, topping_id"),
       ]);
 
       if (cancelled) return;
@@ -133,6 +136,9 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
       if (settingsResult.error) {
         console.error("Unable to load item option settings", settingsResult.error);
       }
+      if (itemToppingsResult.error) {
+        console.error("Unable to load item topping links", itemToppingsResult.error);
+      }
 
       const items = (itemResult.data ?? []) as MenuItemWithVariants[];
       const grouped = ((categoryResult.data ?? []) as MenuCategory[])
@@ -147,11 +153,20 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         settingsMap[row.menu_item_id] = row;
       }
 
+      const toppingIdsMap: Record<string, string[]> = {};
+      for (const row of (itemToppingsResult.data ?? []) as Array<{
+        menu_item_id: string;
+        topping_id: string;
+      }>) {
+        (toppingIdsMap[row.menu_item_id] ??= []).push(row.topping_id);
+      }
+
       setCategories(grouped);
       setToppings((toppingResult.data ?? []) as MenuTopping[]);
       setStock((stockResult.data ?? []) as MenuStockAvailability[]);
       setOptionLevels((levelResult.data ?? []) as MenuOptionLevel[]);
       setItemOptionSettings(settingsMap);
+      setItemToppingIds(toppingIdsMap);
       setActiveCategoryId((current) => {
         if (current && current !== ALL_TAB && grouped.some((category) => category.id === current)) {
           return current;
@@ -546,6 +561,11 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
         stock={stock}
         optionLevels={optionLevels}
         itemSettings={activeItem ? itemOptionSettings[activeItem.id] ?? null : null}
+        allowedToppingIds={
+          activeItem && activeItem.id in itemToppingIds
+            ? itemToppingIds[activeItem.id]
+            : null
+        }
         onClose={() => setActiveItem(null)}
       />
     </section>

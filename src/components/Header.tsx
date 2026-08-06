@@ -1,8 +1,19 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu as MenuIcon, ShoppingCart, X } from "lucide-react";
+import { LogOut, Menu as MenuIcon, Package, ShoppingCart, User, X } from "lucide-react";
+import { toast } from "sonner";
 import { NavLink } from "./NavLink";
 import { useCart } from "@/features/cart/CartProvider";
+import { useAuth } from "@/features/auth/AuthProvider";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -14,6 +25,20 @@ const navLinks = [
 export const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { itemCount } = useCart();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const displayName = profile?.full_name?.trim() || user?.email || "Account";
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out");
+      navigate("/");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not sign out");
+    }
+  };
 
   return (
     <>
@@ -61,6 +86,63 @@ export const Header = () => {
               Order Now
             </NavLink>
 
+            {!authLoading && user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-foreground/75 transition-colors hover:border-accent/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Open profile menu"
+                  >
+                    <User size={18} strokeWidth={1.75} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 rounded-xl border-border bg-background p-1.5 shadow-md">
+                  <DropdownMenuLabel className="px-2.5 py-2">
+                    <p className="truncate text-[13px] font-semibold text-foreground">{displayName}</p>
+                    {user.email ? (
+                      <p className="mt-0.5 truncate text-[11px] font-normal text-muted-foreground">
+                        {user.email}
+                      </p>
+                    ) : null}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem asChild className="cursor-pointer rounded-lg px-2.5 py-2 text-[13px]">
+                    <Link to="/account/orders">
+                      <Package className="mr-2 h-4 w-4" />
+                      Order history
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer rounded-lg px-2.5 py-2 text-[13px]">
+                    <Link to="/account/profile">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem
+                    className="cursor-pointer rounded-lg px-2.5 py-2 text-[13px] text-destructive focus:text-destructive"
+                    onSelect={() => {
+                      void handleSignOut();
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : !authLoading ? (
+              <NavLink
+                to="/login"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white text-foreground/75 transition-colors hover:border-accent/40 hover:text-foreground"
+                aria-label="Sign in"
+              >
+                <User size={18} strokeWidth={1.75} />
+              </NavLink>
+            ) : (
+              <span className="inline-flex h-9 w-9" aria-hidden />
+            )}
+
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((open) => !open)}
@@ -93,6 +175,45 @@ export const Header = () => {
                   {link.label}
                 </NavLink>
               ))}
+              {user ? (
+                <>
+                  <NavLink
+                    to="/account/orders"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="rounded px-3 py-3 text-[15px] font-medium text-foreground/80"
+                    activeClassName="!text-foreground !font-semibold bg-secondary"
+                  >
+                    Order history
+                  </NavLink>
+                  <NavLink
+                    to="/account/profile"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="rounded px-3 py-3 text-[15px] font-medium text-foreground/80"
+                    activeClassName="!text-foreground !font-semibold bg-secondary"
+                  >
+                    Profile
+                  </NavLink>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      void handleSignOut();
+                    }}
+                    className="rounded px-3 py-3 text-left text-[15px] font-medium text-destructive"
+                  >
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <NavLink
+                  to="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="rounded px-3 py-3 text-[15px] font-medium text-foreground/80"
+                  activeClassName="!text-foreground !font-semibold bg-secondary"
+                >
+                  Sign in
+                </NavLink>
+              )}
             </nav>
           </motion.div>
         ) : null}

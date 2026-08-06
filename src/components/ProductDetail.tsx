@@ -24,6 +24,7 @@ export const ProductDetail = () => {
   const [toppings, setToppings] = useState<MenuTopping[]>([]);
   const [optionLevels, setOptionLevels] = useState<MenuOptionLevel[]>([]);
   const [itemSettings, setItemSettings] = useState<MenuItemOptionSettings | null>(null);
+  const [allowedToppingIds, setAllowedToppingIds] = useState<string[] | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -50,7 +51,14 @@ export const ProductDetail = () => {
     hasAvailableSize,
     priceForSize,
     addToCart,
-  } = useDrinkCustomization(item, toppings, initialStock, optionLevels, itemSettings);
+  } = useDrinkCustomization(
+    item,
+    toppings,
+    initialStock,
+    optionLevels,
+    itemSettings,
+    allowedToppingIds,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -103,7 +111,7 @@ export const ProductDetail = () => {
         console.error("Unable to load sugar/ice levels", levelResult.error);
       }
 
-      const [{ data: category }, settingsResult] = await Promise.all([
+      const [{ data: category }, settingsResult, itemToppingsResult] = await Promise.all([
         supabase
           .from("menu_categories")
           .select("name")
@@ -117,6 +125,10 @@ export const ProductDetail = () => {
           )
           .eq("menu_item_id", menuItem.id)
           .maybeSingle(),
+        supabase
+          .from("menu_item_toppings")
+          .select("topping_id")
+          .eq("menu_item_id", menuItem.id),
       ]);
 
       let currentStock: MenuStockAvailability[] = [];
@@ -133,6 +145,11 @@ export const ProductDetail = () => {
       setToppings((toppingResult.data ?? []) as MenuTopping[]);
       setOptionLevels((levelResult.data ?? []) as MenuOptionLevel[]);
       setItemSettings((settingsResult.data as MenuItemOptionSettings | null) ?? null);
+      setAllowedToppingIds(
+        itemToppingsResult.error
+          ? null
+          : (itemToppingsResult.data ?? []).map((row) => row.topping_id as string),
+      );
       setCategoryName((category as { name?: string } | null)?.name ?? "ToTea menu");
       setLoading(false);
     }

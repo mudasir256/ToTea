@@ -62,3 +62,13 @@ export function iceLevelNames(levels: MenuOptionLevel[]): string[] {
   const names = levelsOfKind(levels, "ice").map((level) => level.name);
   return names.length > 0 ? names : [...FALLBACK_ICE_LEVELS];
 }
+
+/** Admin section toggles: only an explicit `false` hides the section on the storefront. */
+export function isToppingSectionEnabled(
+  settings: { standard_toppings_enabled?: boolean; cream_toppings_enabled?: boolean } | null | undefined,
+  category: "standard" | "cream",
+): boolean {
+  if (!settings) return true;
+  if (category === "standard") return settings.standard_toppings_enabled !== false;
+  return settings.cream_toppings_enabled !== false;
+}

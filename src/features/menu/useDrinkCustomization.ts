@@ -13,6 +13,7 @@ import {
   defaultLevelName,
   drinkIncludesFreeTopping,
   iceLevelNames,
+  isToppingSectionEnabled,
   MAX_STANDARD_TOPPINGS_DEFAULT,
   MAX_STANDARD_TOPPINGS_MILK_TEA,
   sugarLevelNames,
@@ -128,6 +129,8 @@ export function useDrinkCustomization(
   initialStock: MenuStockAvailability[],
   optionLevels: MenuOptionLevel[] = [],
   itemSettings?: MenuItemOptionSettings | null,
+  /** Per-item topping ids from admin. `null` = no restriction; `[]` = none allowed. */
+  allowedToppingIds: string[] | null = null,
 ) {
   const { addItem } = useCart();
   const [stock, setStock] = useState<MenuStockAvailability[]>(initialStock);
@@ -144,20 +147,28 @@ export function useDrinkCustomization(
   const sugarLevels = useMemo(() => sugarLevelNames(optionLevels), [optionLevels]);
   const iceLevels = useMemo(() => iceLevelNames(optionLevels), [optionLevels]);
 
-  const creamToppings = useMemo(
-    () =>
-      itemSettings?.cream_toppings_enabled === false
-        ? []
-        : toppings.filter((topping) => topping.category === "cream"),
-    [toppings, itemSettings?.cream_toppings_enabled],
+  const allowedToppingIdSet = useMemo(
+    () => (allowedToppingIds ? new Set(allowedToppingIds) : null),
+    [allowedToppingIds],
   );
-  const standardToppings = useMemo(
-    () =>
-      itemSettings?.standard_toppings_enabled === false
-        ? []
-        : toppings.filter((topping) => topping.category === "standard"),
-    [toppings, itemSettings?.standard_toppings_enabled],
-  );
+
+  const creamToppings = useMemo(() => {
+    if (!isToppingSectionEnabled(itemSettings, "cream")) return [];
+    return toppings.filter((topping) => {
+      if (topping.category !== "cream") return false;
+      if (allowedToppingIdSet && !allowedToppingIdSet.has(topping.id)) return false;
+      return true;
+    });
+  }, [toppings, itemSettings, allowedToppingIdSet]);
+
+  const standardToppings = useMemo(() => {
+    if (!isToppingSectionEnabled(itemSettings, "standard")) return [];
+    return toppings.filter((topping) => {
+      if (topping.category !== "standard") return false;
+      if (allowedToppingIdSet && !allowedToppingIdSet.has(topping.id)) return false;
+      return true;
+    });
+  }, [toppings, itemSettings, allowedToppingIdSet]);
 
   const toppingGroups = useMemo(
     () =>
