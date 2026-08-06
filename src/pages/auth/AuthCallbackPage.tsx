@@ -21,7 +21,7 @@ export default function AuthCallbackPage() {
       window.history.replaceState({}, document.title, "/auth/callback");
       if (ok) {
         toast.success("Signed in successfully");
-        navigate("/account/profile", { replace: true });
+        navigate("/cart", { replace: true });
       } else {
         toast.error(message || "Sign-in failed. Please try again.");
         navigate("/login", { replace: true });

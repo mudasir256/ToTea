@@ -34,7 +34,7 @@ export default function LoginPage() {
       await signIn(values);
       toast.success("Signed in successfully");
       const from = (location.state as { from?: string } | null)?.from;
-      navigate(isSafeReturnPath(from) ? from : "/account/profile", { replace: true });
+      navigate(isSafeReturnPath(from) ? from : "/cart", { replace: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to sign in";
       setFormError(message);
