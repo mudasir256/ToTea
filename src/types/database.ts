@@ -66,7 +66,6 @@ export type MenuItem = {
   id: string;
   category_id: string;
   name: string;
-  slug: string;
   description: string;
   image_url: string;
   price: number;
