@@ -18,6 +18,7 @@ type CheckoutBody = {
   contactNumber: string;
   items: CheckoutItem[];
   tipCents?: number;
+  promoCode?: string;
   shippingAddress: {
     address_line_1: string;
     address_line_2?: string;
@@ -28,6 +29,8 @@ type CheckoutBody = {
   };
   saveContact?: boolean;
 };
+
+const FIRST_ORDER_DISCOUNT_CENTS = 200;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -360,14 +363,81 @@ serve(async (req) => {
       });
     }
 
+    let discountCents = 0;
+    let discountCode: string | null = null;
+    let discountReason: string | null = null;
+    let customerPromoAssignmentId: string | null = null;
+
+    const requestedCode = String(body.promoCode ?? "")
+      .trim()
+      .toUpperCase();
+
+    if (requestedCode) {
+      const { data: assignment, error: promoError } = await admin
+        .from("customer_promo_codes")
+        .select(
+          "id, status, promo_codes!inner(id, code, discount_type, discount_value, is_active)",
+        )
+        .eq("user_id", user.id)
+        .eq("status", "available")
+        .eq("promo_codes.code", requestedCode)
+        .maybeSingle();
+
+      if (promoError) {
+        console.error("promo lookup failed", promoError);
+        return json(400, { error: "Unable to validate promo code." }, corsHeaders);
+      }
+
+      const promoRow = assignment
+        ? (Array.isArray(assignment.promo_codes)
+            ? assignment.promo_codes[0]
+            : assignment.promo_codes)
+        : null;
+
+      if (!assignment || !promoRow || promoRow.is_active === false) {
+        return json(
+          400,
+          { error: "That promo code is invalid or already used." },
+          corsHeaders,
+        );
+      }
+
+      if (promoRow.discount_type === "percent") {
+        discountCents = Math.round(
+          subtotalCents * (Number(promoRow.discount_value) / 100),
+        );
+      } else {
+        discountCents = Math.round(Number(promoRow.discount_value) * 100);
+      }
+      discountCents = Math.max(0, Math.min(subtotalCents, discountCents));
+      discountCode = String(promoRow.code).toUpperCase();
+      discountReason = "promo_code";
+      customerPromoAssignmentId = assignment.id as string;
+    } else {
+      const { count: paidCount, error: paidCountError } = await admin
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("payment_status", "paid");
+
+      if (paidCountError) {
+        console.error("paid order count failed", paidCountError);
+      } else if ((paidCount ?? 0) === 0) {
+        discountCents = Math.min(FIRST_ORDER_DISCOUNT_CENTS, subtotalCents);
+        discountReason = "first_order";
+        discountCode = null;
+      }
+    }
+
+    const taxableCents = Math.max(0, subtotalCents - discountCents);
     const taxCents = Math.round(
-      Math.max(0, subtotalCents) * (Number.isFinite(taxRateBps) ? taxRateBps / 10000 : 0),
+      taxableCents * (Number.isFinite(taxRateBps) ? taxRateBps / 10000 : 0),
     );
     const tipCents = Math.max(
       0,
       Math.min(50_000, Math.round(Number(body.tipCents) || 0)),
     );
-    const totalCents = subtotalCents + taxCents + tipCents;
+    const totalCents = taxableCents + taxCents + tipCents;
 
     if (totalCents < 1) {
       return json(400, { error: "Order total is invalid." }, corsHeaders);
@@ -388,6 +458,20 @@ serve(async (req) => {
         calculation_phase: "TOTAL_PHASE",
       });
     }
+
+    const squareDiscounts =
+      discountCents > 0
+        ? [
+            {
+              name:
+                discountReason === "first_order"
+                  ? "First order discount"
+                  : `Promo ${discountCode}`,
+              amount_money: { amount: discountCents, currency: "USD" },
+              scope: "ORDER",
+            },
+          ]
+        : [];
 
     const squareOrderPayload = {
       idempotency_key: `${body.idempotencyKey}-order`,
@@ -410,6 +494,7 @@ serve(async (req) => {
             .filter(Boolean)
             .join(" · "),
         })),
+        ...(squareDiscounts.length > 0 ? { discounts: squareDiscounts } : {}),
         ...(serviceCharges.length > 0 ? { service_charges: serviceCharges } : {}),
         fulfillments: [
           {
@@ -518,6 +603,9 @@ serve(async (req) => {
         country: body.shippingAddress.country.trim() || "US",
       },
       subtotal: dollarsFromCents(subtotalCents),
+      discount: dollarsFromCents(discountCents),
+      discount_code: discountCode,
+      discount_reason: discountReason,
       tax: dollarsFromCents(taxCents),
       tip: dollarsFromCents(tipCents),
       total: dollarsFromCents(squareOrderTotal),
@@ -546,6 +634,21 @@ serve(async (req) => {
         },
         corsHeaders,
       );
+    }
+
+    if (customerPromoAssignmentId) {
+      const { error: markUsedError } = await admin
+        .from("customer_promo_codes")
+        .update({
+          status: "used",
+          used_at: new Date().toISOString(),
+          used_order_id: inserted.id,
+        })
+        .eq("id", customerPromoAssignmentId)
+        .eq("status", "available");
+      if (markUsedError) {
+        console.error("Failed to mark promo used", markUsedError);
+      }
     }
 
     // Deduct recipe + topping inventory for this paid order immediately.

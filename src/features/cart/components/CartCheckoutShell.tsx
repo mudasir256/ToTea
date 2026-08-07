@@ -86,10 +86,48 @@ export function OrderTypePills({
 export function AccountPromoCard({
   mode,
   onGuest,
+  signedIn,
+  firstOrderEligible,
+  firstOrderApplied,
+  promoApplied,
 }: {
   mode: "guest" | "account";
   onGuest: () => void;
+  signedIn?: boolean;
+  firstOrderEligible?: boolean;
+  /** True when the $2 first-order discount is currently in totals (no promo code applied). */
+  firstOrderApplied?: boolean;
+  /** True when a promo code discount is active (hides first-order applied state). */
+  promoApplied?: boolean;
 }) {
+  if (signedIn) {
+    if (!firstOrderEligible) return null;
+    if (promoApplied) {
+      return (
+        <div className="mb-4 rounded-xl border border-border bg-white px-[18px] py-4">
+          <div className="mb-1 text-[13.5px] font-semibold text-foreground">
+            $2 off your first order
+          </div>
+          <div className="text-[12px] leading-relaxed text-muted-foreground">
+            Available when no other promo code is applied.
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="mb-4 rounded-xl border border-border bg-white px-[18px] py-4">
+        <div className="mb-1 text-[13.5px] font-semibold text-foreground">
+          $2 off your first order
+        </div>
+        <div className="text-[12px] leading-relaxed text-muted-foreground">
+          {firstOrderApplied
+            ? "Applied to this order automatically."
+            : "Will apply automatically at checkout."}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-4 rounded-xl border border-border bg-white px-[18px] py-4">
       <div className="mb-1 text-[13.5px] font-semibold text-foreground">
@@ -125,27 +163,74 @@ export function AccountPromoCard({
   );
 }
 
+export function AssignedPromoCard({
+  code,
+  discountLabel,
+  applied,
+  onApply,
+}: {
+  code: string;
+  discountLabel: string;
+  applied: boolean;
+  onApply: () => void;
+}) {
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-white px-[18px] py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mb-1 text-[13.5px] font-semibold text-foreground">
+            {code} · {discountLabel}
+          </div>
+          <div className="text-[12px] leading-relaxed text-muted-foreground">
+            {applied ? "Applied to this order." : "A promo assigned to your account."}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onApply}
+          disabled={applied}
+          className={`shrink-0 rounded-md border px-3.5 py-2 text-[12.5px] font-semibold ${
+            applied
+              ? "cursor-default border-foreground bg-foreground text-background"
+              : "border-border bg-background text-foreground hover:border-foreground"
+          }`}
+        >
+          {applied ? "Applied" : "Apply"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function OrderSidebar({
   items,
   subtotalCents,
+  discountCents = 0,
+  discountLabel,
   taxCents,
   tipInput,
   onTipChange,
   totalCents,
   promo,
   onPromoChange,
+  onPromoApply,
+  promoError,
   onEditItem,
   onRemoveItem,
   action,
 }: {
   items: LocalCartItem[];
   subtotalCents: number;
+  discountCents?: number;
+  discountLabel?: string | null;
   taxCents: number;
   tipInput: string;
   onTipChange: (value: string) => void;
   totalCents: number;
   promo: string;
   onPromoChange: (value: string) => void;
+  onPromoApply?: () => void;
+  promoError?: string | null;
   onEditItem?: (item: LocalCartItem) => void;
   onRemoveItem?: (item: LocalCartItem) => void;
   action: React.ReactNode;
@@ -226,19 +311,37 @@ export function OrderSidebar({
           onChange={(event) => onPromoChange(event.target.value)}
           placeholder="Promo code"
           className="min-w-0 flex-1 rounded-[7px] border border-border bg-white px-3 py-2 text-[12.5px] text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onPromoApply?.();
+            }
+          }}
         />
         <button
           type="button"
+          onClick={() => onPromoApply?.()}
           className="rounded-[7px] border border-foreground bg-white px-3.5 py-2 text-[12px] font-semibold text-foreground"
         >
           Apply
         </button>
       </div>
+      {promoError ? (
+        <p className="mt-1.5 text-[12px] text-destructive">{promoError}</p>
+      ) : null}
 
       <div className="mt-1.5 flex justify-between py-2 text-[13px]">
         <span className="text-muted-foreground">Subtotal</span>
         <span className="tabular-nums">{formatMoney(subtotalCents)}</span>
       </div>
+      {discountCents > 0 ? (
+        <div className="flex justify-between py-2 text-[13px]">
+          <span className="text-muted-foreground">
+            Discount{discountLabel ? ` (${discountLabel})` : ""}
+          </span>
+          <span className="tabular-nums">−{formatMoney(discountCents)}</span>
+        </div>
+      ) : null}
       <div className="flex justify-between py-2 text-[13px]">
         <span className="text-muted-foreground">Tax</span>
         <span className="tabular-nums">{formatMoney(taxCents)}</span>
