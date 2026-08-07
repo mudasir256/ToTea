@@ -128,14 +128,15 @@ function ToppingRow({
           <span className="shrink-0 rounded-full bg-[#5a7a52] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
             Included
           </span>
-        ) : null}
-        <span
-          className={`shrink-0 text-[13px] font-medium tabular-nums ${
-            included || priceLabel === "Free" ? "text-foreground" : "text-muted-foreground"
-          }`}
-        >
-          {priceLabel}
-        </span>
+        ) : (
+          <span
+            className={`shrink-0 text-[13px] font-medium tabular-nums ${
+              priceLabel === "Free" ? "text-foreground" : "text-muted-foreground"
+            }`}
+          >
+            {priceLabel}
+          </span>
+        )}
       </button>
     </li>
   );
