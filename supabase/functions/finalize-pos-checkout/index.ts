@@ -25,12 +25,14 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
       ? "*"
       : origin && allowed.includes(origin)
         ? origin
-        : allowed[0];
+        : "null";
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
+    Vary: "Origin",
   };
 }
 

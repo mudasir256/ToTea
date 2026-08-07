@@ -37,17 +37,21 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
     .map((o) => o.trim())
     .filter(Boolean);
 
+  // Only echo an allowed origin. Never fall back to a different origin —
+  // that makes browsers report a generic "Failed to send a request" error.
   const allowOrigin =
     allowed.length === 0
       ? "*"
       : origin && allowed.includes(origin)
         ? origin
-        : allowed[0];
+        : "null";
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
+    Vary: "Origin",
   };
 }
 

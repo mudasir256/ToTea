@@ -86,8 +86,18 @@ export async function placeSquareOrder(input: PlaceOrderInput): Promise<string> 
   const supabase = getSupabase();
   if (!supabase) throw new Error("Supabase is not configured");
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Please sign in again before placing your order.");
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke("create-checkout", {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: {
         idempotencyKey,
         sourceId: tokenResult.token,
@@ -105,11 +115,16 @@ export async function placeSquareOrder(input: PlaceOrderInput): Promise<string> 
 
     if (error) {
       let message = error.message;
+      if (/failed to send a request to the edge function/i.test(message)) {
+        message =
+          "Checkout could not reach the server (network/CORS). Refresh and try again, or sign in again.";
+      }
       const response = (error as { context?: Response }).context;
       if (response) {
         try {
-          const payload = (await response.clone().json()) as { error?: string };
+          const payload = (await response.clone().json()) as { error?: string; message?: string };
           if (payload.error) message = payload.error;
+          else if (payload.message) message = payload.message;
         } catch {
           // keep client error
         }
