@@ -38,6 +38,8 @@ export const ProductDetail = () => {
     sizes,
     sugarLevels,
     iceLevels,
+    defaultSweetness,
+    defaultIce,
     selectedSize,
     setSelectedSize,
     selectedSweetness,
@@ -349,6 +351,7 @@ export const ProductDetail = () => {
                       }`}
                     >
                       {level}
+                      {level === defaultSweetness ? " ★" : ""}
                     </button>
                   ))}
                 </div>
@@ -370,6 +373,7 @@ export const ProductDetail = () => {
                       }`}
                     >
                       {level}
+                      {level === defaultIce ? " ★" : ""}
                     </button>
                   ))}
                 </div>

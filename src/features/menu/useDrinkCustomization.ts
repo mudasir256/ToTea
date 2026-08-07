@@ -56,6 +56,17 @@ const toSelection = (topping: MenuTopping): CartToppingSelection => ({
 
 type AddItem = ReturnType<typeof useCart>["addItem"];
 
+/** Keep selection on a real option — stale names like removed "Less Sugar" leave nothing selected. */
+function resolveLevelSelection(
+  current: string,
+  available: string[],
+  fallback: string,
+) {
+  if (available.includes(current)) return current;
+  if (available.includes(fallback)) return fallback;
+  return available[0] ?? fallback;
+}
+
 function defaultsForItem(
   item: MenuItemWithVariants,
   optionLevels: MenuOptionLevel[],
@@ -146,6 +157,14 @@ export function useDrinkCustomization(
   const sizes = useMemo(() => variants.map((variant) => variant.size), [variants]);
   const sugarLevels = useMemo(() => sugarLevelNames(optionLevels), [optionLevels]);
   const iceLevels = useMemo(() => iceLevelNames(optionLevels), [optionLevels]);
+  const defaultSweetness = useMemo(
+    () => defaultLevelName(optionLevels, "sugar", itemSettings?.default_sugar_level_id),
+    [optionLevels, itemSettings?.default_sugar_level_id],
+  );
+  const defaultIce = useMemo(
+    () => defaultLevelName(optionLevels, "ice", itemSettings?.default_ice_level_id),
+    [optionLevels, itemSettings?.default_ice_level_id],
+  );
 
   const allowedToppingIdSet = useMemo(
     () => (allowedToppingIds ? new Set(allowedToppingIds) : null),
@@ -204,8 +223,10 @@ export function useDrinkCustomization(
       return;
     }
     const defaults = defaultsForItem(item, optionLevels, itemSettings);
-    setSelectedSweetness(defaults.sweetness);
-    setSelectedIce(defaults.ice);
+    const sugars = sugarLevelNames(optionLevels);
+    const ices = iceLevelNames(optionLevels);
+    setSelectedSweetness(resolveLevelSelection(defaults.sweetness, sugars, defaults.sweetness));
+    setSelectedIce(resolveLevelSelection(defaults.ice, ices, defaults.ice));
     setSelectedSize(
       variantsFor(item)
         .map((variant) => variant.size)
@@ -229,6 +250,15 @@ export function useDrinkCustomization(
       standardAllowed && includedStandardId ? [includedStandardId] : [],
     );
   }, [item, initialStock, optionLevels, itemSettings, allowedToppingIdSet, toppings]);
+
+  // If levels/defaults arrive after first paint, snap invalid selections onto the admin default.
+  useEffect(() => {
+    if (!item) return;
+    setSelectedSweetness((current) =>
+      resolveLevelSelection(current, sugarLevels, defaultSweetness),
+    );
+    setSelectedIce((current) => resolveLevelSelection(current, iceLevels, defaultIce));
+  }, [item, sugarLevels, iceLevels, defaultSweetness, defaultIce]);
 
   const includesFreeTopping = Boolean(
     includedStandardToppingId || (item && drinkIncludesFreeTopping(item.name)),
@@ -405,6 +435,8 @@ export function useDrinkCustomization(
     sizes,
     sugarLevels,
     iceLevels,
+    defaultSweetness,
+    defaultIce,
     selectedSize,
     setSelectedSize,
     selectedSweetness,

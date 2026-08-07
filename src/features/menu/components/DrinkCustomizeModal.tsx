@@ -157,6 +157,8 @@ export function DrinkCustomizeModal({
     sizes,
     sugarLevels,
     iceLevels,
+    defaultSweetness,
+    defaultIce,
     selectedSize,
     setSelectedSize,
     selectedSweetness,
@@ -291,6 +293,7 @@ export function DrinkCustomizeModal({
                           onSelect={() => setSelectedSweetness(level)}
                         >
                           {level}
+                          {level === defaultSweetness ? " ★" : ""}
                         </OptionPill>
                       ))}
                     </OptionGroup>
@@ -303,6 +306,7 @@ export function DrinkCustomizeModal({
                           onSelect={() => setSelectedIce(level)}
                         >
                           {level}
+                          {level === defaultIce ? " ★" : ""}
                         </OptionPill>
                       ))}
                     </OptionGroup>

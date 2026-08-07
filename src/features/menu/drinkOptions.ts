@@ -2,7 +2,6 @@ import type { MenuOptionLevel } from "@/types/database";
 
 /** Fallback if option levels fail to load from Supabase. */
 export const FALLBACK_SUGAR_LEVELS = [
-  "Less Sugar",
   "Light Sugar",
   "Minimal Sugar",
   "No Added",
@@ -17,7 +16,7 @@ export const FALLBACK_ICE_LEVELS = [
   "More Ice",
 ] as const;
 
-export const DEFAULT_SWEETNESS = "Less Sugar";
+export const DEFAULT_SWEETNESS = "Light Sugar";
 export const DEFAULT_ICE = "Normal Ice";
 
 /** Milk tea includes 1 free standard topping; other categories charge for all. */
@@ -37,16 +36,16 @@ export function levelsOfKind(
     .sort((left, right) => left.sort_order - right.sort_order);
 }
 
+/**
+ * Storefront preselect: always follow the global ★ default from Admin → Sugar & Ice Levels.
+ * Per-item default_* ids are ignored so changing the global default updates every drink.
+ */
 export function defaultLevelName(
   levels: MenuOptionLevel[],
   kind: "sugar" | "ice",
-  preferredId?: string | null,
+  _preferredId?: string | null,
 ): string {
   const active = levelsOfKind(levels, kind);
-  if (preferredId) {
-    const preferred = active.find((level) => level.id === preferredId);
-    if (preferred) return preferred.name;
-  }
   const markedDefault = active.find((level) => level.is_default);
   if (markedDefault) return markedDefault.name;
   if (active[0]) return active[0].name;
