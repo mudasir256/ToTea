@@ -121,7 +121,7 @@ export const ProductDetail = () => {
         supabase
           .from("menu_item_option_settings")
           .select(
-            "menu_item_id, sugar_enabled, ice_enabled, standard_toppings_enabled, cream_toppings_enabled, default_sugar_level_id, default_ice_level_id",
+            "menu_item_id, sugar_enabled, ice_enabled, standard_toppings_enabled, cream_toppings_enabled, default_sugar_level_id, default_ice_level_id, included_cream_topping_id",
           )
           .eq("menu_item_id", menuItem.id)
           .maybeSingle(),

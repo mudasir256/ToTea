@@ -176,6 +176,17 @@ serve(async (req) => {
       return json(400, { error: "Unable to load menu items for checkout." }, corsHeaders);
     }
 
+    const { data: optionSettings } = await admin
+      .from("menu_item_option_settings")
+      .select("menu_item_id, included_cream_topping_id")
+      .in("menu_item_id", menuItemIds);
+    const includedCreamByMenuItem = new Map(
+      (optionSettings ?? []).map((row) => [
+        row.menu_item_id as string,
+        (row.included_cream_topping_id as string | null) ?? null,
+      ]),
+    );
+
     const allToppingIds = [
       ...new Set(body.items.flatMap((item) => item.toppingIds ?? [])),
     ];
@@ -283,11 +294,15 @@ serve(async (req) => {
         price: number;
       }>;
 
-      // Match storefront: milk tea / brown sugar drinks include 1 free standard topping.
+      // Match storefront: milk tea free standard topping + recipe-included cream.
       const includesFreeTopping =
         /milk\s*tea|boba\s*milk|brown\s*sugar/i.test(menuItem.name);
+      const includedCreamId = includedCreamByMenuItem.get(menuItem.id) ?? null;
       let freeStandardApplied = false;
       const pricedToppings = selectedToppings.map((topping) => {
+        if (includedCreamId && topping.id === includedCreamId) {
+          return { ...topping, price: 0 };
+        }
         const isStandard = String(topping.category).toLowerCase() === "standard";
         if (includesFreeTopping && isStandard && !freeStandardApplied) {
           freeStandardApplied = true;

@@ -161,8 +161,12 @@ export function DrinkCustomizeModal({
     setSelectedSweetness,
     selectedIce,
     setSelectedIce,
-    selectedCreamId,
-    selectCream,
+    selectedCreamIds,
+    toggleCream,
+    clearCream,
+    includedCreamToppingId,
+    includedCreamTopping,
+    maxCreamToppings,
     selectedStandardIds,
     toggleStandardTopping,
     creamToppings,
@@ -298,26 +302,40 @@ export function DrinkCustomizeModal({
                       <OptionGroup
                         list
                         label="Cream tops"
-                        hint="Choose up to 1"
-                        description="Priced per item — optional cream layer on top."
+                        hint={`Choose up to ${maxCreamToppings}`}
+                        description={
+                          includedCreamTopping
+                            ? `${includedCreamTopping.name} comes with this drink — add one more, swap it, or remove it if you'd rather.`
+                            : "Priced per item — optional cream layer on top."
+                        }
                       >
                         <ToppingRow
-                          selected={selectedCreamId === null}
+                          selected={selectedCreamIds.length === 0}
                           name="None"
                           priceLabel="Free"
-                          onSelect={() => selectCream(null)}
+                          onSelect={clearCream}
                         />
                         {creamToppings.map((topping) => {
+                          const included = topping.id === includedCreamToppingId;
+                          const selected = selectedCreamIds.includes(topping.id);
+                          const atCreamLimit =
+                            selectedCreamIds.length >= maxCreamToppings && !selected;
                           const priceCents = Math.round(Number(topping.price) * 100);
                           return (
                             <ToppingRow
                               key={topping.id}
-                              selected={selectedCreamId === topping.id}
+                              selected={selected}
+                              disabled={atCreamLimit}
                               name={topping.name}
+                              included={included}
                               priceLabel={
-                                priceCents > 0 ? `+${formatMoney(priceCents)}` : "Free"
+                                included
+                                  ? "Included"
+                                  : priceCents > 0
+                                    ? `+${formatMoney(priceCents)}`
+                                    : "Free"
                               }
-                              onSelect={() => selectCream(topping.id)}
+                              onSelect={() => toggleCream(topping.id)}
                             />
                           );
                         })}

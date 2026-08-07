@@ -137,7 +137,7 @@ export function useDrinkCustomization(
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedSweetness, setSelectedSweetness] = useState(DEFAULT_SWEETNESS);
   const [selectedIce, setSelectedIce] = useState(DEFAULT_ICE);
-  const [selectedCreamId, setSelectedCreamId] = useState<string | null>(null);
+  const [selectedCreamIds, setSelectedCreamIds] = useState<string[]>([]);
   const [selectedStandardIds, setSelectedStandardIds] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
@@ -179,12 +179,20 @@ export function useDrinkCustomization(
     [standardToppings, creamToppings],
   );
 
+  const includedCreamToppingId = itemSettings?.included_cream_topping_id ?? null;
+  const includedCreamTopping = useMemo(
+    () => creamToppings.find((topping) => topping.id === includedCreamToppingId) ?? null,
+    [creamToppings, includedCreamToppingId],
+  );
+  /** Included cream + one paid cream, or a single paid cream when none is included. */
+  const maxCreamToppings = includedCreamToppingId ? 2 : 1;
+
   useEffect(() => {
     setStock(initialStock);
-    setSelectedCreamId(null);
     setSelectedStandardIds([]);
     setQuantity(1);
     if (!item) {
+      setSelectedCreamIds([]);
       setSelectedSize("");
       setSelectedSweetness(DEFAULT_SWEETNESS);
       setSelectedIce(DEFAULT_ICE);
@@ -198,7 +206,13 @@ export function useDrinkCustomization(
         .map((variant) => variant.size)
         .find((size) => availableQuantity(initialStock, item.id, size) > 0) ?? "",
     );
-  }, [item, initialStock, optionLevels, itemSettings]);
+    const includedId = itemSettings?.included_cream_topping_id ?? null;
+    const includedAllowed =
+      includedId &&
+      (!allowedToppingIdSet || allowedToppingIdSet.has(includedId)) &&
+      toppings.some((topping) => topping.id === includedId && topping.category === "cream");
+    setSelectedCreamIds(includedAllowed && includedId ? [includedId] : []);
+  }, [item, initialStock, optionLevels, itemSettings, allowedToppingIdSet, toppings]);
 
   const includesFreeTopping = Boolean(item && drinkIncludesFreeTopping(item.name));
   const maxStandardToppings = includesFreeTopping
@@ -210,13 +224,13 @@ export function useDrinkCustomization(
     : null;
 
   const selectedToppings: CartToppingSelection[] = useMemo(() => {
-    const cream = creamToppings.find((topping) => topping.id === selectedCreamId);
+    const creams = creamToppings.filter((topping) => selectedCreamIds.includes(topping.id));
     const standards = standardToppings.filter((topping) =>
       selectedStandardIds.includes(topping.id),
     );
-    return [...(cream ? [cream] : []), ...standards].map((topping) => {
+    return [...creams, ...standards].map((topping) => {
       const selection = toSelection(topping);
-      if (topping.id === freeStandardToppingId) {
+      if (topping.id === freeStandardToppingId || topping.id === includedCreamToppingId) {
         return { ...selection, price_cents: 0 };
       }
       return selection;
@@ -224,9 +238,10 @@ export function useDrinkCustomization(
   }, [
     creamToppings,
     standardToppings,
-    selectedCreamId,
+    selectedCreamIds,
     selectedStandardIds,
     freeStandardToppingId,
+    includedCreamToppingId,
   ]);
 
   const toppingsPriceCents = useMemo(
@@ -265,27 +280,38 @@ export function useDrinkCustomization(
     });
   };
 
-  /** Cream tops are single-select (None or one cream). */
-  const selectCream = (toppingId: string | null) => {
-    setSelectedCreamId(toppingId);
+  const clearCream = () => setSelectedCreamIds([]);
+
+  const toggleCream = (toppingId: string) => {
+    setSelectedCreamIds((current) => {
+      if (current.includes(toppingId)) {
+        return current.filter((id) => id !== toppingId);
+      }
+      if (current.length >= maxCreamToppings) {
+        toast.error(
+          includedCreamTopping
+            ? `Choose up to 2 creams. ${includedCreamTopping.name} comes with this drink — add one more, swap it, or remove it.`
+            : "Choose up to 1 cream top.",
+        );
+        return current;
+      }
+      return [...current, toppingId];
+    });
   };
 
   /** Back-compat for ProductDetail which still calls toggleTopping. */
   const toggleTopping = (toppingId: string) => {
     const cream = creamToppings.find((topping) => topping.id === toppingId);
     if (cream) {
-      setSelectedCreamId((current) => (current === toppingId ? null : toppingId));
+      toggleCream(toppingId);
       return;
     }
     toggleStandardTopping(toppingId);
   };
 
   const selectedToppingIds = useMemo(
-    () => [
-      ...(selectedCreamId ? [selectedCreamId] : []),
-      ...selectedStandardIds,
-    ],
-    [selectedCreamId, selectedStandardIds],
+    () => [...selectedCreamIds, ...selectedStandardIds],
+    [selectedCreamIds, selectedStandardIds],
   );
 
   const priceForSize = (size: string) =>
@@ -360,8 +386,12 @@ export function useDrinkCustomization(
     setSelectedSweetness,
     selectedIce,
     setSelectedIce,
-    selectedCreamId,
-    selectCream,
+    selectedCreamIds,
+    toggleCream,
+    clearCream,
+    includedCreamToppingId,
+    includedCreamTopping,
+    maxCreamToppings,
     selectedStandardIds,
     toggleStandardTopping,
     selectedToppingIds,

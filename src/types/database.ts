@@ -125,6 +125,8 @@ export type MenuItemOptionSettings = {
   cream_toppings_enabled: boolean;
   default_sugar_level_id: string | null;
   default_ice_level_id: string | null;
+  /** Cream topping that comes with the drink recipe (shown as Included). */
+  included_cream_topping_id?: string | null;
 };
 
 export type Review = {
