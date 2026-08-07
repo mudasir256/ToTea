@@ -30,25 +30,38 @@ export function calcCartSubtotal(
 }
 
 export const DEFAULT_SHIPPING_CENTS = 0;
-export const DEFAULT_TAX_RATE = 0;
+/** 10% sales tax on the cart subtotal (after discounts). */
+export const DEFAULT_TAX_RATE = 0.1;
 export const DEFAULT_DISCOUNT_CENTS = 0;
 
 export function calcOrderTotals(subtotalCents: number, options?: {
   shippingCents?: number;
   taxRate?: number;
   discountCents?: number;
+  tipCents?: number;
 }) {
   const shipping = options?.shippingCents ?? DEFAULT_SHIPPING_CENTS;
   const discount = options?.discountCents ?? DEFAULT_DISCOUNT_CENTS;
   const taxRate = options?.taxRate ?? DEFAULT_TAX_RATE;
+  const tip = Math.max(0, Math.round(options?.tipCents ?? 0));
   const taxable = Math.max(0, subtotalCents - discount);
   const tax = Math.round(taxable * taxRate);
-  const total = Math.max(0, taxable + tax + shipping);
+  const total = Math.max(0, taxable + tax + shipping + tip);
   return {
     subtotalCents,
     shippingCents: shipping,
     discountCents: discount,
     taxCents: tax,
+    tipCents: tip,
     totalCents: total,
   };
+}
+
+/** Parse a tip dollar string like "2" or "2.50" into cents (max $500). */
+export function parseTipInputToCents(raw: string): number {
+  const cleaned = raw.trim().replace(/[^0-9.]/g, "");
+  if (!cleaned) return 0;
+  const value = Number(cleaned);
+  if (!Number.isFinite(value) || value < 0) return 0;
+  return Math.min(50_000, Math.round(value * 100));
 }

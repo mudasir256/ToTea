@@ -167,6 +167,9 @@ export type Order = {
   customer_details: CustomerDetails;
   items: OrderItemSnapshot[];
   shipping_address: ShippingAddress;
+  subtotal?: number;
+  tax?: number;
+  tip?: number;
   total: number;
   order_status: OrderStatus;
   payment_status: PaymentStatus;

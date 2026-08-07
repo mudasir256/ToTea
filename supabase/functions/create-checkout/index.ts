@@ -17,6 +17,7 @@ type CheckoutBody = {
   customerEmail?: string;
   contactNumber: string;
   items: CheckoutItem[];
+  tipCents?: number;
   shippingAddress: {
     address_line_1: string;
     address_line_2?: string;
@@ -93,7 +94,8 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const squareToken = Deno.env.get("SQUARE_ACCESS_TOKEN");
     const locationId = Deno.env.get("SQUARE_LOCATION_ID");
-    const taxRateBps = Number(Deno.env.get("TAX_RATE_BPS") || "0");
+    // 1000 bps = 10% — keep in sync with storefront DEFAULT_TAX_RATE.
+    const taxRateBps = Number(Deno.env.get("TAX_RATE_BPS") || "1000");
 
     if (!squareToken || !locationId) {
       return json(500, { error: "Checkout is temporarily unavailable." }, corsHeaders);
@@ -361,10 +363,30 @@ serve(async (req) => {
     const taxCents = Math.round(
       Math.max(0, subtotalCents) * (Number.isFinite(taxRateBps) ? taxRateBps / 10000 : 0),
     );
-    const totalCents = subtotalCents + taxCents;
+    const tipCents = Math.max(
+      0,
+      Math.min(50_000, Math.round(Number(body.tipCents) || 0)),
+    );
+    const totalCents = subtotalCents + taxCents + tipCents;
 
     if (totalCents < 1) {
       return json(400, { error: "Order total is invalid." }, corsHeaders);
+    }
+
+    const serviceCharges: Array<Record<string, unknown>> = [];
+    if (taxCents > 0) {
+      serviceCharges.push({
+        name: "Sales Tax",
+        amount_money: { amount: taxCents, currency: "USD" },
+        calculation_phase: "TOTAL_PHASE",
+      });
+    }
+    if (tipCents > 0) {
+      serviceCharges.push({
+        name: "Tip",
+        amount_money: { amount: tipCents, currency: "USD" },
+        calculation_phase: "TOTAL_PHASE",
+      });
     }
 
     const squareOrderPayload = {
@@ -388,17 +410,7 @@ serve(async (req) => {
             .filter(Boolean)
             .join(" · "),
         })),
-        ...(taxCents > 0
-          ? {
-              service_charges: [
-                {
-                  name: "Sales Tax",
-                  amount_money: { amount: taxCents, currency: "USD" },
-                  calculation_phase: "TOTAL_PHASE",
-                },
-              ],
-            }
-          : {}),
+        ...(serviceCharges.length > 0 ? { service_charges: serviceCharges } : {}),
         fulfillments: [
           {
             type: "PICKUP",
@@ -505,6 +517,9 @@ serve(async (req) => {
         postal_code: body.shippingAddress.postal_code.trim(),
         country: body.shippingAddress.country.trim() || "US",
       },
+      subtotal: dollarsFromCents(subtotalCents),
+      tax: dollarsFromCents(taxCents),
+      tip: dollarsFromCents(tipCents),
       total: dollarsFromCents(squareOrderTotal),
       order_status: "confirmed",
       payment_status: "paid",

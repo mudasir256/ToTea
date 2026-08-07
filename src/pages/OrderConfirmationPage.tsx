@@ -1,86 +1,95 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { OrderPickupPanel } from "@/features/orders/OrderPickupPanel";
 import { getSupabase } from "@/lib/supabase";
 import type { Order } from "@/types/database";
-import { formatDateTime, formatMoney } from "@/lib/money";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { ErrorAlert } from "@/components/shared/ErrorAlert";
 import { Button } from "@/components/ui/button";
-import { OrderStatusBadge } from "@/components/shared/OrderStatusBadge";
 
-function formatOrderMoney(amount: number) {
-  return formatMoney(Math.round(Number(amount) * 100));
-}
+const ORDER_SELECT =
+  "id, order_number, items, shipping_address, subtotal, tax, tip, total, order_status, payment_status, created_at, customer_details";
+
+type HistoryOrder = Pick<
+  Order,
+  "id" | "order_number" | "items" | "total" | "created_at" | "order_status"
+>;
 
 export default function OrderConfirmationPage() {
   const { orderId } = useParams<{ orderId: string }>();
   const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
+  const [historyOrders, setHistoryOrders] = useState<HistoryOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       if (!user || !orderId) return;
+      setLoading(true);
+      setError(null);
       const supabase = getSupabase();
       if (!supabase) {
         setError("Supabase is not configured");
         setLoading(false);
         return;
       }
+
       const { data, error: queryError } = await supabase
         .from("orders")
-        .select("id, order_number, items, total, order_status, payment_status, created_at")
+        .select(ORDER_SELECT)
         .eq("id", orderId)
         .eq("user_id", user.id)
         .maybeSingle();
+
       if (queryError || !data) {
         setError(queryError?.message || "Order not found");
+        setOrder(null);
         setLoading(false);
         return;
       }
-      setOrder(data as Order);
+
+      const current = data as Order;
+      setOrder(current);
+
+      const { data: history } = await supabase
+        .from("orders")
+        .select("id, order_number, items, total, created_at, order_status")
+        .eq("user_id", user.id)
+        .neq("id", orderId)
+        .order("created_at", { ascending: false })
+        .limit(3);
+
+      setHistoryOrders((history as HistoryOrder[] | null) ?? []);
       setLoading(false);
     };
+
     void load();
   }, [user, orderId]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#F6EFE2]">
       <Header />
-      <main className="section-padding pt-28 md:pt-36">
-        <div className="container mx-auto max-w-xl px-6">
+      <main className="relative overflow-hidden px-5 pb-16 pt-28 md:px-8 md:pt-36">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(200,135,61,0.06),transparent_40%),radial-gradient(circle_at_90%_90%,rgba(92,110,78,0.06),transparent_40%)]"
+        />
+        <div className="relative mx-auto max-w-[900px]">
           {loading ? (
             <LoadingSpinner label="Confirming your order..." />
           ) : error || !order ? (
-            <ErrorAlert message={error || "Order not found"} />
-          ) : (
-            <div className="rounded-4xl border border-border bg-card p-8 text-center shadow-elevated">
-              <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
-              <h1 className="mt-4 text-3xl font-semibold">Thank you!</h1>
-              <p className="mt-2 text-muted-foreground">
-                Your order {order.order_number} was placed successfully.
-              </p>
-              <div className="mt-6 space-y-2 text-sm">
-                <div className="flex justify-center">
-                  <OrderStatusBadge status={order.order_status} />
-                </div>
-                <p>{formatDateTime(order.created_at).full}</p>
-                <p className="text-lg font-semibold">{formatOrderMoney(order.total)}</p>
-              </div>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-                <Button asChild className="btn-accent">
-                  <Link to={`/account/orders/${order.id}`}>View order details</Link>
-                </Button>
-                <Button asChild variant="outline" className="rounded-2xl">
-                  <Link to="/menu">Continue shopping</Link>
-                </Button>
-              </div>
+            <div className="mx-auto max-w-xl">
+              <ErrorAlert message={error || "Order not found"} />
+              <Button asChild className="mt-6 rounded-2xl">
+                <Link to="/menu">Back to menu</Link>
+              </Button>
             </div>
+          ) : (
+            <OrderPickupPanel order={order} historyOrders={historyOrders} />
           )}
         </div>
       </main>

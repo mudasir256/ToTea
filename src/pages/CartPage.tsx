@@ -20,7 +20,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorAlert } from "@/components/shared/ErrorAlert";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Button } from "@/components/ui/button";
-import { formatMoney } from "@/lib/money";
+import { calcOrderTotals, formatMoney, parseTipInputToCents } from "@/lib/money";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { normalizePhone } from "@/lib/validation";
 
@@ -36,6 +36,9 @@ export default function CartPage() {
   const [orderType, setOrderType] = useState<"asap" | "later">("asap");
   const [accountMode, setAccountMode] = useState<"guest" | "account">("guest");
   const [promo, setPromo] = useState("");
+  const [tipInput, setTipInput] = useState("");
+  const tipCents = parseTipInputToCents(tipInput);
+  const payTotalCents = calcOrderTotals(subtotalCents, { tipCents }).totalCents;
   const [marketingOptIn, setMarketingOptIn] = useState(true);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -109,7 +112,8 @@ export default function CartPage() {
     try {
       const orderId = await placeSquareOrder({
         items,
-        totalCents,
+        totalCents: payTotalCents,
+        tipCents,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
@@ -240,7 +244,9 @@ export default function CartPage() {
             items={items}
             subtotalCents={subtotalCents}
             taxCents={taxCents}
-            totalCents={totalCents}
+            tipInput={tipInput}
+            onTipChange={setTipInput}
+            totalCents={payTotalCents}
             promo={promo}
             onPromoChange={setPromo}
             onEditItem={setEditingItem}
@@ -253,7 +259,7 @@ export default function CartPage() {
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent py-[15px] text-[14.5px] font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-active disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Place order · {formatMoney(totalCents)}
+                Place order · {formatMoney(payTotalCents)}
               </button>
             }
           />

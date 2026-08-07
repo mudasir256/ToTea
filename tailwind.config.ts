@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         serif: ["Fraunces", "serif"],
         sans: ["Inter", "sans-serif"],
+        mono: ["Space Mono", "ui-monospace", "monospace"],
       },
       colors: {
         "accent-hover": "hsl(var(--accent-hover))",

@@ -23,7 +23,7 @@ import { placeSquareOrder } from "@/features/checkout/placeOrder";
 import { useSquareCard } from "@/features/checkout/useSquareCard";
 import { contactNumberSchema, normalizePhone } from "@/lib/validation";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { formatMoney } from "@/lib/money";
+import { calcOrderTotals, formatMoney, parseTipInputToCents } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { ErrorAlert } from "@/components/shared/ErrorAlert";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -63,7 +63,10 @@ export default function CheckoutPage() {
   const [accountMode, setAccountMode] = useState<"guest" | "account">("guest");
   const [marketingOptIn, setMarketingOptIn] = useState(draft.marketingOptIn ?? true);
   const [promo, setPromo] = useState(draft.promo ?? "");
+  const [tipInput, setTipInput] = useState("");
   const [editingItem, setEditingItem] = useState<LocalCartItem | null>(null);
+  const tipCents = parseTipInputToCents(tipInput);
+  const payTotalCents = calcOrderTotals(subtotalCents, { tipCents }).totalCents;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(checkoutSchema),
@@ -106,7 +109,8 @@ export default function CheckoutPage() {
     try {
       const orderId = await placeSquareOrder({
         items,
-        totalCents,
+        totalCents: payTotalCents,
+        tipCents,
         firstName: values.first_name,
         lastName: values.last_name,
         email: values.email,
@@ -271,7 +275,9 @@ export default function CheckoutPage() {
             items={items}
             subtotalCents={subtotalCents}
             taxCents={taxCents}
-            totalCents={totalCents}
+            tipInput={tipInput}
+            onTipChange={setTipInput}
+            totalCents={payTotalCents}
             promo={promo}
             onPromoChange={setPromo}
             onEditItem={setEditingItem}
@@ -283,7 +289,7 @@ export default function CheckoutPage() {
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent py-[15px] text-[14.5px] font-semibold text-white transition-colors hover:bg-accent-hover active:bg-accent-active disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Place order · {formatMoney(totalCents)}
+                Place order · {formatMoney(payTotalCents)}
               </button>
             }
           />

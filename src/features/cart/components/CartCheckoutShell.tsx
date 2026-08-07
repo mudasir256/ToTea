@@ -129,6 +129,8 @@ export function OrderSidebar({
   items,
   subtotalCents,
   taxCents,
+  tipInput,
+  onTipChange,
   totalCents,
   promo,
   onPromoChange,
@@ -139,6 +141,8 @@ export function OrderSidebar({
   items: LocalCartItem[];
   subtotalCents: number;
   taxCents: number;
+  tipInput: string;
+  onTipChange: (value: string) => void;
   totalCents: number;
   promo: string;
   onPromoChange: (value: string) => void;
@@ -239,9 +243,22 @@ export function OrderSidebar({
         <span className="text-muted-foreground">Tax</span>
         <span className="tabular-nums">{formatMoney(taxCents)}</span>
       </div>
-      <div className="flex justify-between py-2 text-[13px]">
-        <span className="text-muted-foreground">Tip</span>
-        <span>—</span>
+      <div className="flex items-center justify-between gap-3 py-2 text-[13px]">
+        <label htmlFor="order-tip" className="text-muted-foreground">
+          Tip
+        </label>
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground">$</span>
+          <input
+            id="order-tip"
+            type="text"
+            inputMode="decimal"
+            value={tipInput}
+            onChange={(event) => onTipChange(event.target.value)}
+            placeholder="0.00"
+            className="w-[5.5rem] rounded-[7px] border border-border bg-white px-2.5 py-1.5 text-right text-[13px] tabular-nums text-foreground placeholder:text-muted-foreground focus:border-accent focus:outline-none"
+          />
+        </div>
       </div>
       <div className="mt-1.5 flex justify-between border-t border-border pt-3 text-[14.5px] font-bold">
         <span>Total</span>

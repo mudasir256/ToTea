@@ -23,6 +23,7 @@ type Tokenize = (details?: unknown) => Promise<{
 type PlaceOrderInput = {
   items: LocalCartItem[];
   totalCents: number;
+  tipCents?: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -110,6 +111,7 @@ export async function placeSquareOrder(input: PlaceOrderInput): Promise<string> 
         marketingOptIn: input.marketingOptIn,
         orderType: input.orderType,
         promoCode: input.promoCode || undefined,
+        tipCents: Math.max(0, Math.round(input.tipCents ?? 0)),
       },
     });
 
