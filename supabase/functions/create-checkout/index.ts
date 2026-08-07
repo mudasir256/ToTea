@@ -503,6 +503,20 @@ serve(async (req) => {
       );
     }
 
+    // Deduct recipe + topping inventory for this paid order immediately.
+    const { data: inventoryResult, error: inventoryError } = await admin.rpc(
+      "deduct_inventory_for_paid_order",
+      { p_order_id: inserted.id },
+    );
+    if (inventoryError) {
+      console.error("Paid order inventory deduction failed", inventoryError);
+    } else if (
+      inventoryResult?.status !== "deducted" &&
+      inventoryResult?.status !== "already_deducted"
+    ) {
+      console.warn("Paid order needs inventory review", inventoryResult);
+    }
+
     if (body.saveContact !== false) {
       await admin
         .from("profiles")

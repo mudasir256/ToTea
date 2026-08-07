@@ -354,6 +354,21 @@ serve(async (req) => {
       },
     });
 
+    if (orderId) {
+      const { data: inventoryResult, error: inventoryError } = await admin.rpc(
+        "deduct_inventory_for_paid_order",
+        { p_order_id: orderId },
+      );
+      if (inventoryError) {
+        console.error("POS inventory deduction failed", inventoryError);
+      } else if (
+        inventoryResult?.status !== "deducted" &&
+        inventoryResult?.status !== "already_deducted"
+      ) {
+        console.warn("POS order needs inventory review", inventoryResult);
+      }
+    }
+
     return json(
       200,
       {

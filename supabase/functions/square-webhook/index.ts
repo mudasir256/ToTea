@@ -153,6 +153,23 @@ serve(async (req) => {
       }
     }
 
+    if (paymentStatus === "paid") {
+      const { data: inventoryResult, error: inventoryError } = await admin.rpc(
+        "deduct_inventory_for_paid_order",
+        { p_order_id: order.id },
+      );
+      if (inventoryError) {
+        console.error("Square inventory deduction failed", inventoryError);
+        return json(500, { error: "Inventory deduction failed" });
+      }
+      if (
+        inventoryResult?.status !== "deducted" &&
+        inventoryResult?.status !== "already_deducted"
+      ) {
+        console.warn("Square payment needs inventory review", inventoryResult);
+      }
+    }
+
     return json(200, { ok: true });
   } catch (error) {
     console.error(error);
