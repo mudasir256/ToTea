@@ -131,6 +131,21 @@ export async function addDefaultToCart(
   }
 }
 
+export type DrinkInitialSelection = {
+  size?: string;
+  sweetness?: string;
+  ice?: string;
+  toppingIds?: string[];
+  quantity?: number;
+};
+
+type DrinkCustomizationOptions = {
+  /** Prefill from an existing cart line when editing. */
+  initialSelection?: DrinkInitialSelection | null;
+  /** When set, save replaces this cart line instead of adding a new one. */
+  replaceCartItemId?: string | null;
+};
+
 /**
  * Size, sweetness, ice, and topping selection with live pricing + stock check.
  */
@@ -142,8 +157,10 @@ export function useDrinkCustomization(
   itemSettings?: MenuItemOptionSettings | null,
   /** Per-item topping ids from admin. `null` = no restriction; `[]` = none allowed. */
   allowedToppingIds: string[] | null = null,
+  options: DrinkCustomizationOptions = {},
 ) {
-  const { addItem } = useCart();
+  const { addItem, replaceItem } = useCart();
+  const { initialSelection = null, replaceCartItemId = null } = options;
   const [stock, setStock] = useState<MenuStockAvailability[]>(initialStock);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedSweetness, setSelectedSweetness] = useState(DEFAULT_SWEETNESS);
@@ -213,8 +230,8 @@ export function useDrinkCustomization(
 
   useEffect(() => {
     setStock(initialStock);
-    setQuantity(1);
     if (!item) {
+      setQuantity(1);
       setSelectedCreamIds([]);
       setSelectedStandardIds([]);
       setSelectedSize("");
@@ -225,13 +242,46 @@ export function useDrinkCustomization(
     const defaults = defaultsForItem(item, optionLevels, itemSettings);
     const sugars = sugarLevelNames(optionLevels);
     const ices = iceLevelNames(optionLevels);
-    setSelectedSweetness(resolveLevelSelection(defaults.sweetness, sugars, defaults.sweetness));
-    setSelectedIce(resolveLevelSelection(defaults.ice, ices, defaults.ice));
-    setSelectedSize(
-      variantsFor(item)
-        .map((variant) => variant.size)
-        .find((size) => availableQuantity(initialStock, item.id, size) > 0) ?? "",
+    const itemSizes = variantsFor(item).map((variant) => variant.size);
+    const preferredSize = initialSelection?.size;
+    const sizeFromCart =
+      preferredSize &&
+      itemSizes.some((size) => size.toLowerCase() === preferredSize.toLowerCase())
+        ? itemSizes.find((size) => size.toLowerCase() === preferredSize.toLowerCase()) ?? ""
+        : "";
+
+    setSelectedSweetness(
+      resolveLevelSelection(
+        initialSelection?.sweetness ?? defaults.sweetness,
+        sugars,
+        defaults.sweetness,
+      ),
     );
+    setSelectedIce(
+      resolveLevelSelection(initialSelection?.ice ?? defaults.ice, ices, defaults.ice),
+    );
+    setSelectedSize(
+      sizeFromCart ||
+        itemSizes.find((size) => availableQuantity(initialStock, item.id, size) > 0) ||
+        "",
+    );
+    setQuantity(
+      Math.max(1, Math.floor(initialSelection?.quantity ?? 1)),
+    );
+
+    const initialToppingIds = initialSelection?.toppingIds;
+    if (initialToppingIds) {
+      const creamIds = initialToppingIds.filter((id) =>
+        toppings.some((topping) => topping.id === id && topping.category === "cream"),
+      );
+      const standardIds = initialToppingIds.filter((id) =>
+        toppings.some((topping) => topping.id === id && topping.category === "standard"),
+      );
+      setSelectedCreamIds(creamIds);
+      setSelectedStandardIds(standardIds);
+      return;
+    }
+
     const includedCreamId = itemSettings?.included_cream_topping_id ?? null;
     const creamAllowed =
       includedCreamId &&
@@ -249,7 +299,15 @@ export function useDrinkCustomization(
     setSelectedStandardIds(
       standardAllowed && includedStandardId ? [includedStandardId] : [],
     );
-  }, [item, initialStock, optionLevels, itemSettings, allowedToppingIdSet, toppings]);
+  }, [
+    item,
+    initialStock,
+    optionLevels,
+    itemSettings,
+    allowedToppingIdSet,
+    toppings,
+    initialSelection,
+  ]);
 
   // If levels/defaults arrive after first paint, snap invalid selections onto the admin default.
   useEffect(() => {
@@ -402,7 +460,7 @@ export function useDrinkCustomization(
         return false;
       }
 
-      await addItem({
+      const payload = {
         product_id: item.id,
         product_variant_id: buildCartVariantId(item.id, selectedSize, selectedToppings, {
           sweetness: selectedSweetness,
@@ -419,7 +477,13 @@ export function useDrinkCustomization(
         unit_price_cents: totalUnitPriceCents,
         stock_quantity: currentQuantity,
         quantity,
-      });
+      };
+
+      if (replaceCartItemId) {
+        await replaceItem(replaceCartItemId, payload);
+      } else {
+        await addItem(payload);
+      }
       return true;
     } catch (stockError) {
       console.error("Unable to confirm live menu stock", stockError);

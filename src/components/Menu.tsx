@@ -55,8 +55,8 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
       ? catalogError.message
       : "We could not load the menu. Please try again."
     : null;
-  /** Start on the first category so only ~3–8 images compete on first paint. */
-  const [activeCategoryId, setActiveCategoryId] = useState<string>("");
+  /** Default tab is All so the full menu is visible on first paint. */
+  const [activeCategoryId, setActiveCategoryId] = useState<string>(ALL_TAB);
   const [query, setQuery] = useState("");
   const [addingId, setAddingId] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<MenuItemWithVariants | null>(null);
@@ -64,14 +64,15 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
   useEffect(() => {
     if (!catalog?.categories.length) return;
     setActiveCategoryId((current) => {
-      if (current && current !== ALL_TAB && catalog.categories.some((category) => category.id === current)) {
+      if (current === ALL_TAB || current === "extras") return current;
+      if (current && catalog.categories.some((category) => category.id === current)) {
         return current;
       }
-      return catalog.categories[0]?.id ?? ALL_TAB;
+      return ALL_TAB;
     });
-    const firstCategoryItems = catalog.categories[0]?.items ?? [];
+    const firstPaintItems = catalog.categories.flatMap((category) => category.items).slice(0, 8);
     preloadMenuImages(
-      firstCategoryItems.map((item) => resolveMenuCardImage(item.name, item.image_url)),
+      firstPaintItems.map((item) => resolveMenuCardImage(item.name, item.image_url)),
       8,
     );
   }, [catalog]);
@@ -103,8 +104,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
     [categories],
   );
 
-  const resolvedActiveCategoryId =
-    activeCategoryId || categories[0]?.id || ALL_TAB;
+  const resolvedActiveCategoryId = activeCategoryId || ALL_TAB;
   const activeCategory = categories.find((category) => category.id === resolvedActiveCategoryId);
   const showingAll = !trimmedQuery && resolvedActiveCategoryId === ALL_TAB;
   const showingExtras = !trimmedQuery && resolvedActiveCategoryId === "extras";

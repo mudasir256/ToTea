@@ -22,6 +22,15 @@ type Props = {
   optionLevels: MenuOptionLevel[];
   itemSettings?: MenuItemOptionSettings | null;
   allowedToppingIds?: string[] | null;
+  /** Prefill + replace mode when editing a cart line. */
+  initialSelection?: {
+    size?: string;
+    sweetness?: string;
+    ice?: string;
+    toppingIds?: string[];
+    quantity?: number;
+  } | null;
+  replaceCartItemId?: string | null;
   onClose: () => void;
 };
 
@@ -150,8 +159,11 @@ export function DrinkCustomizeModal({
   optionLevels,
   itemSettings = null,
   allowedToppingIds = null,
+  initialSelection = null,
+  replaceCartItemId = null,
   onClose,
 }: Props) {
+  const editing = Boolean(replaceCartItemId);
   const {
     stock: liveStock,
     sizes,
@@ -194,6 +206,7 @@ export function DrinkCustomizeModal({
     optionLevels,
     itemSettings,
     allowedToppingIds,
+    { initialSelection, replaceCartItemId },
   );
 
   const quantityLimit = Math.min(MAX_QUANTITY, Math.max(0, selectedQuantity));
@@ -429,7 +442,9 @@ export function DrinkCustomizeModal({
                   {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   {quantityLimit < 1
                     ? "Unavailable"
-                    : `Add to cart · ${formatMoney(runningTotalCents)}`}
+                    : editing
+                      ? `Update · ${formatMoney(runningTotalCents)}`
+                      : `Add to cart · ${formatMoney(runningTotalCents)}`}
                 </button>
               </div>
             </>

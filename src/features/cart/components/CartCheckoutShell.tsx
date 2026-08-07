@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import type { LocalCartItem } from "@/features/cart/CartProvider";
 import { formatMoney } from "@/lib/money";
 
@@ -131,6 +132,8 @@ export function OrderSidebar({
   totalCents,
   promo,
   onPromoChange,
+  onEditItem,
+  onRemoveItem,
   action,
 }: {
   items: LocalCartItem[];
@@ -139,6 +142,8 @@ export function OrderSidebar({
   totalCents: number;
   promo: string;
   onPromoChange: (value: string) => void;
+  onEditItem?: (item: LocalCartItem) => void;
+  onRemoveItem?: (item: LocalCartItem) => void;
   action: React.ReactNode;
 }) {
   return (
@@ -150,6 +155,7 @@ export function OrderSidebar({
       {items.map((item) => {
         const toppings = item.selected_options.toppings ?? [];
         const meta = [
+          item.selected_options.size,
           item.selected_options.sweetness,
           item.selected_options.ice,
           ...toppings.map((topping) => topping.name),
@@ -176,12 +182,34 @@ export function OrderSidebar({
                   {meta}
                 </div>
               ) : null}
-              <Link to="/menu" className="mt-1 inline-block text-[11px] text-accent-hover">
-                Edit
-              </Link>
+              {onEditItem ? (
+                <button
+                  type="button"
+                  onClick={() => onEditItem(item)}
+                  className="mt-1 inline-block text-[11px] text-accent-hover"
+                >
+                  Edit
+                </button>
+              ) : (
+                <Link to="/menu" className="mt-1 inline-block text-[11px] text-accent-hover">
+                  Edit
+                </Link>
+              )}
             </div>
-            <div className="text-[13px] font-semibold tabular-nums text-foreground">
-              {formatMoney(item.unit_price_cents * item.quantity)}
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <div className="text-[13px] font-semibold tabular-nums text-foreground">
+                {formatMoney(item.unit_price_cents * item.quantity)}
+              </div>
+              {onRemoveItem ? (
+                <button
+                  type="button"
+                  aria-label={`Remove ${item.product_name} from cart`}
+                  onClick={() => onRemoveItem(item)}
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 size={15} strokeWidth={1.75} />
+                </button>
+              ) : null}
             </div>
           </div>
         );

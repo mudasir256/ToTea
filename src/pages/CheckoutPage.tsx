@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { useCart } from "@/features/cart/CartProvider";
+import { useCart, type LocalCartItem } from "@/features/cart/CartProvider";
 import {
   AccountPromoCard,
   CartCheckoutHeader,
@@ -17,6 +17,7 @@ import {
   OrderTypePills,
   fieldInputClass,
 } from "@/features/cart/components/CartCheckoutShell";
+import { CartItemCustomizeModal } from "@/features/cart/components/CartItemCustomizeModal";
 import { SquareCardField } from "@/features/checkout/SquareCardField";
 import { placeSquareOrder } from "@/features/checkout/placeOrder";
 import { useSquareCard } from "@/features/checkout/useSquareCard";
@@ -48,7 +49,7 @@ type CartDraft = {
 
 export default function CheckoutPage() {
   const { user, profile, refreshProfile } = useAuth();
-  const { items, subtotalCents, taxCents, totalCents, clearCart } = useCart();
+  const { items, subtotalCents, taxCents, totalCents, clearCart, removeItem } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const draft = (location.state as CartDraft | null) ?? {};
@@ -62,6 +63,7 @@ export default function CheckoutPage() {
   const [accountMode, setAccountMode] = useState<"guest" | "account">("guest");
   const [marketingOptIn, setMarketingOptIn] = useState(draft.marketingOptIn ?? true);
   const [promo, setPromo] = useState(draft.promo ?? "");
+  const [editingItem, setEditingItem] = useState<LocalCartItem | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(checkoutSchema),
@@ -272,6 +274,8 @@ export default function CheckoutPage() {
             totalCents={totalCents}
             promo={promo}
             onPromoChange={setPromo}
+            onEditItem={setEditingItem}
+            onRemoveItem={(item) => void removeItem(item.id)}
             action={
               <button
                 type="submit"
@@ -285,6 +289,8 @@ export default function CheckoutPage() {
           />
         </form>
       </main>
+
+      <CartItemCustomizeModal cartItem={editingItem} onClose={() => setEditingItem(null)} />
     </div>
   );
 }

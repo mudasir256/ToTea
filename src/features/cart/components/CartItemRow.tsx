@@ -1,5 +1,4 @@
 import { Minus, Plus } from "lucide-react";
-import { Link } from "react-router-dom";
 import type { LocalCartItem } from "@/features/cart/CartProvider";
 import { formatMoney } from "@/lib/money";
 
@@ -7,6 +6,7 @@ type Props = {
   item: LocalCartItem;
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
+  onEdit?: (item: LocalCartItem) => void;
   compact?: boolean;
 };
 
@@ -22,7 +22,13 @@ function itemMeta(item: LocalCartItem) {
     .join(" · ");
 }
 
-export function CartItemRow({ item, onUpdateQuantity, onRemove, compact = false }: Props) {
+export function CartItemRow({
+  item,
+  onUpdateQuantity,
+  onRemove,
+  onEdit,
+  compact = false,
+}: Props) {
   const outOfStock = item.stock_quantity < 1;
   const atMax = item.quantity >= item.stock_quantity;
   const meta = itemMeta(item);
@@ -79,11 +85,15 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove, compact = false 
               Remove
             </button>
           </div>
-        ) : (
-          <Link to="/cart" className="mt-1 inline-block text-[11px] text-accent-hover">
+        ) : onEdit ? (
+          <button
+            type="button"
+            onClick={() => onEdit(item)}
+            className="mt-1 inline-block text-[11px] text-accent-hover"
+          >
             Edit
-          </Link>
-        )}
+          </button>
+        ) : null}
       </div>
       <div className="text-[13px] font-semibold tabular-nums text-foreground">
         {formatMoney(item.unit_price_cents * item.quantity)}

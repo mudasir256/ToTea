@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { useCart } from "@/features/cart/CartProvider";
+import { useCart, type LocalCartItem } from "@/features/cart/CartProvider";
 import {
   AccountPromoCard,
   CartCheckoutHeader,
@@ -12,6 +12,7 @@ import {
   OrderTypePills,
   fieldInputClass,
 } from "@/features/cart/components/CartCheckoutShell";
+import { CartItemCustomizeModal } from "@/features/cart/components/CartItemCustomizeModal";
 import { SquareCardField } from "@/features/checkout/SquareCardField";
 import { placeSquareOrder } from "@/features/checkout/placeOrder";
 import { useSquareCard } from "@/features/checkout/useSquareCard";
@@ -25,7 +26,8 @@ import { normalizePhone } from "@/lib/validation";
 
 export default function CartPage() {
   const { user, profile, refreshProfile } = useAuth();
-  const { items, loading, subtotalCents, taxCents, totalCents, clearCart } = useCart();
+  const { items, loading, subtotalCents, taxCents, totalCents, clearCart, removeItem } =
+    useCart();
   const navigate = useNavigate();
   const { ready: squareReady, error: squareError, tokenize } = useSquareCard(
     "square-card-container-cart",
@@ -41,6 +43,7 @@ export default function CartPage() {
   const [email, setEmail] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [editingItem, setEditingItem] = useState<LocalCartItem | null>(null);
 
   if (loading) {
     return (
@@ -240,6 +243,8 @@ export default function CartPage() {
             totalCents={totalCents}
             promo={promo}
             onPromoChange={setPromo}
+            onEditItem={setEditingItem}
+            onRemoveItem={(item) => void removeItem(item.id)}
             action={
               <button
                 type="button"
@@ -254,6 +259,8 @@ export default function CartPage() {
           />
         </div>
       </main>
+
+      <CartItemCustomizeModal cartItem={editingItem} onClose={() => setEditingItem(null)} />
     </div>
   );
 }

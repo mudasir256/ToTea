@@ -73,6 +73,11 @@ type CartContextValue = {
   totalCents: number;
   loading: boolean;
   addItem: (input: Omit<LocalCartItem, "id" | "quantity"> & { quantity?: number }) => Promise<void>;
+  /** Replace a cart line (edit customizations) by id. */
+  replaceItem: (
+    itemId: string,
+    input: Omit<LocalCartItem, "id" | "quantity"> & { quantity?: number },
+  ) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -185,6 +190,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [persistCart]
   );
 
+  const replaceItem = useCallback<CartContextValue["replaceItem"]>(
+    async (itemId, input) => {
+      const existing = readLocalCart();
+      if (!existing.some((entry) => entry.id === itemId)) {
+        toast.error("That item is no longer in your cart.");
+        return;
+      }
+
+      const quantity = Math.max(1, Math.floor(input.quantity ?? 1));
+      const limit = itemLimit(input.stock_quantity);
+      if (limit < 1 || quantity > limit) {
+        toast.error("This quantity is not available");
+        return;
+      }
+
+      const without = existing.filter((entry) => entry.id !== itemId);
+      const replacement: LocalCartItem = {
+        id: itemId,
+        ...input,
+        quantity,
+      };
+      persistCart(mergeItems(without, [replacement]));
+      toast.success("Updated cart");
+    },
+    [persistCart],
+  );
+
   const updateQuantity = useCallback<CartContextValue["updateQuantity"]>(
     async (itemId, quantity) => {
       const item = items.find((entry) => entry.id === itemId);
@@ -223,6 +255,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       totalCents: totals.totalCents,
       loading,
       addItem,
+      replaceItem,
       updateQuantity,
       removeItem,
       clearCart,
@@ -236,6 +269,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       loading,
       refreshCart,
       removeItem,
+      replaceItem,
       totals.discountCents,
       totals.shippingCents,
       totals.subtotalCents,
