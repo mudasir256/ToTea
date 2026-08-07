@@ -75,6 +75,7 @@ export type MenuItem = {
   calories: string;
   allergens: string;
   is_available: boolean;
+  is_bestseller?: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;

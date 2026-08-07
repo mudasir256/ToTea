@@ -100,6 +100,9 @@ export const HomeStory = () => {
             <img
               src={section.media.src}
               alt={section.media.alt}
+              loading={section.id === "01" ? "eager" : "lazy"}
+              decoding="async"
+              fetchPriority={section.id === "01" ? "high" : "low"}
               className="h-full w-full object-cover"
             />
           </div>

@@ -34,7 +34,7 @@ export default function OrderConfirmationPage() {
       }
       const { data, error: queryError } = await supabase
         .from("orders")
-        .select("*")
+        .select("id, order_number, items, total, order_status, payment_status, created_at")
         .eq("id", orderId)
         .eq("user_id", user.id)
         .maybeSingle();

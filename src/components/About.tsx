@@ -108,6 +108,8 @@ export const About = ({ hideHeader = false }: AboutProps) => {
               <img
                 src={section.media.src}
                 alt={section.media.alt}
+                loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover"
               />
             </div>

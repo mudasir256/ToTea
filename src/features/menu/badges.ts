@@ -1,15 +1,9 @@
 /**
- * "Bestseller" / "House Specialty" badges from the design spec.
+ * Menu card badges.
  *
- * There is no badge column on `menu_items`, so the picks live here. Edit the two
- * lists below (drink names, case-insensitive) to change which cards get a badge.
- * Move this to the database if the team needs to change it without a deploy.
+ * "Bestseller" is controlled from the admin dashboard (`menu_items.is_bestseller`).
+ * "House Specialty" remains a small curated list until that flag is added in admin.
  */
-const BESTSELLERS = [
-  "Brown Sugar Milk Tea",
-  "Vietnamese Sea Salt Coffee",
-  "Classic Milk Tea",
-];
 
 const HOUSE_SPECIALTIES = [
   "Egg Vietnamese Coffee",
@@ -17,13 +11,16 @@ const HOUSE_SPECIALTIES = [
   "Crème Brûlée Brown Sugar Milk",
 ];
 
-const BADGE_BY_NAME = new Map<string, string>([
-  ...BESTSELLERS.map((name) => [name.toLowerCase(), "Bestseller"] as const),
-  ...HOUSE_SPECIALTIES.map((name) => [name.toLowerCase(), "House Specialty"] as const),
-]);
+const HOUSE_SPECIALTY_BY_NAME = new Map(
+  HOUSE_SPECIALTIES.map((name) => [name.toLowerCase(), "House Specialty"] as const),
+);
 
-export function badgeFor(itemName: string): string | null {
-  return BADGE_BY_NAME.get(itemName.trim().toLowerCase()) ?? null;
+export function badgeFor(item: {
+  name: string;
+  is_bestseller?: boolean | null;
+}): string | null {
+  if (item.is_bestseller) return "Bestseller";
+  return HOUSE_SPECIALTY_BY_NAME.get(item.name.trim().toLowerCase()) ?? null;
 }
 
 /** Short at-a-glance chips under the card description. */

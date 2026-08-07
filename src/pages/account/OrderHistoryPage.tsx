@@ -42,7 +42,7 @@ export default function OrderHistoryPage() {
       const to = from + PAGE_SIZE - 1;
       const { data, error: queryError } = await supabase
         .from("orders")
-        .select("*")
+        .select("id, order_number, items, total, order_status, payment_status, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .range(from, to);

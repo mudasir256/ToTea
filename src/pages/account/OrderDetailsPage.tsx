@@ -40,7 +40,9 @@ export default function OrderDetailsPage() {
 
       const { data, error: queryError } = await supabase
         .from("orders")
-        .select("*")
+        .select(
+          "id, order_number, items, shipping_address, total, order_status, payment_status, created_at, customer_details",
+        )
         .eq("id", orderId)
         .eq("user_id", user.id)
         .maybeSingle();

@@ -76,7 +76,8 @@ export const Reviews = () => {
       const { data, error: fetchError } = await supabase
         .from("reviews")
         .select("id, reviewer_name, rating, description")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(24);
 
       if (cancelled) return;
 

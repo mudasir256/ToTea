@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
@@ -6,6 +6,8 @@ import { formatMoney } from "@/lib/money";
 import { availableQuantity, fetchMenuStock } from "@/lib/menuStock";
 import { useDrinkCustomization } from "@/features/menu/useDrinkCustomization";
 import { getSupabase } from "@/lib/supabase";
+import { resolveMenuCardImage } from "@/lib/menuImages";
+import { badgeFor } from "@/features/menu/badges";
 import type {
   MenuItemOptionSettings,
   MenuItemWithVariants,
@@ -13,8 +15,9 @@ import type {
   MenuStockAvailability,
   MenuTopping,
 } from "@/types/database";
-import NotFound from "@/pages/NotFound";
 import { Button } from "@/components/ui/button";
+
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
 export const ProductDetail = () => {
   const { productName } = useParams<{ productName: string }>();
@@ -76,34 +79,62 @@ export const ProductDetail = () => {
         return;
       }
 
-      const [itemResult, toppingResult, levelResult] = await Promise.all([
-        supabase
-          .from("menu_items")
-          .select("*, menu_item_variants(*)")
-          .eq("name", decodedName)
-          .eq("is_available", true)
-          .maybeSingle(),
-        supabase
-          .from("menu_toppings")
-          .select("*")
-          .eq("is_available", true)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("menu_option_levels")
-          .select("id, kind, name, sort_order, is_default, is_active")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
-      ]);
+      type ItemWithCategory = MenuItemWithVariants & {
+        menu_categories?: { name: string } | null;
+      };
+
+      const itemResult = await supabase
+        .from("menu_items")
+        .select(
+          "id, category_id, name, slug, description, image_url, price, sizes, ingredients, calories, allergens, is_available, is_bestseller, sort_order, created_at, updated_at, menu_item_variants(id, menu_item_id, size, price, sort_order, created_at, updated_at), menu_categories(name)",
+        )
+        .eq("name", decodedName)
+        .eq("is_available", true)
+        .maybeSingle();
 
       if (cancelled) return;
 
-      const menuItem = itemResult.data as MenuItemWithVariants | null;
+      const menuItem = itemResult.data as ItemWithCategory | null;
       if (itemResult.error || !menuItem) {
         if (itemResult.error) console.error("Unable to load menu item", itemResult.error);
         setNotFound(true);
         setLoading(false);
         return;
       }
+
+      const [toppingResult, levelResult, settingsResult, itemToppingsResult, stockResult] =
+        await Promise.all([
+          supabase
+            .from("menu_toppings")
+            .select(
+              "id, name, category, image_url, price, is_available, sort_order, created_at, updated_at",
+            )
+            .eq("is_available", true)
+            .order("sort_order", { ascending: true }),
+          supabase
+            .from("menu_option_levels")
+            .select("id, kind, name, sort_order, is_default, is_active")
+            .eq("is_active", true)
+            .order("sort_order", { ascending: true }),
+          supabase
+            .from("menu_item_option_settings")
+            .select(
+              "menu_item_id, sugar_enabled, ice_enabled, standard_toppings_enabled, cream_toppings_enabled, default_sugar_level_id, default_ice_level_id, included_cream_topping_id, included_standard_topping_id",
+            )
+            .eq("menu_item_id", menuItem.id)
+            .maybeSingle(),
+          supabase
+            .from("menu_item_toppings")
+            .select("topping_id")
+            .eq("menu_item_id", menuItem.id),
+          fetchMenuStock(supabase, menuItem.id).catch((stockError) => {
+            console.error("Unable to load live menu stock", stockError);
+            return [] as MenuStockAvailability[];
+          }),
+        ]);
+
+      if (cancelled) return;
+
       if (toppingResult.error) {
         console.error("Unable to load toppings", toppingResult.error);
       }
@@ -111,37 +142,9 @@ export const ProductDetail = () => {
         console.error("Unable to load sugar/ice levels", levelResult.error);
       }
 
-      const [{ data: category }, settingsResult, itemToppingsResult] = await Promise.all([
-        supabase
-          .from("menu_categories")
-          .select("name")
-          .eq("id", menuItem.category_id)
-          .eq("is_active", true)
-          .maybeSingle(),
-        supabase
-          .from("menu_item_option_settings")
-          .select(
-            "menu_item_id, sugar_enabled, ice_enabled, standard_toppings_enabled, cream_toppings_enabled, default_sugar_level_id, default_ice_level_id, included_cream_topping_id, included_standard_topping_id",
-          )
-          .eq("menu_item_id", menuItem.id)
-          .maybeSingle(),
-        supabase
-          .from("menu_item_toppings")
-          .select("topping_id")
-          .eq("menu_item_id", menuItem.id),
-      ]);
-
-      let currentStock: MenuStockAvailability[] = [];
-      try {
-        currentStock = await fetchMenuStock(supabase, menuItem.id);
-      } catch (stockError) {
-        console.error("Unable to load live menu stock", stockError);
-      }
-
-      if (cancelled) return;
-
-      setItem(menuItem);
-      setInitialStock(currentStock);
+      const { menu_categories: category, ...itemFields } = menuItem;
+      setItem(itemFields);
+      setInitialStock(stockResult);
       setToppings((toppingResult.data ?? []) as MenuTopping[]);
       setOptionLevels((levelResult.data ?? []) as MenuOptionLevel[]);
       setItemSettings((settingsResult.data as MenuItemOptionSettings | null) ?? null);
@@ -150,7 +153,7 @@ export const ProductDetail = () => {
           ? null
           : (itemToppingsResult.data ?? []).map((row) => row.topping_id as string),
       );
-      setCategoryName((category as { name?: string } | null)?.name ?? "ToTea menu");
+      setCategoryName(category?.name ?? "ToTea menu");
       setLoading(false);
     }
 
@@ -180,7 +183,16 @@ export const ProductDetail = () => {
     );
   }
 
-  if (notFound || !item) return <NotFound />;
+  if (notFound || !item) {
+    return (
+      <Suspense fallback={null}>
+        <NotFound />
+      </Suspense>
+    );
+  }
+
+  const heroImage = resolveMenuCardImage(item.name, item.image_url);
+  const badge = badgeFor(item);
 
   return (
     <section className="bg-background pt-24 md:pt-28">
@@ -207,12 +219,13 @@ export const ProductDetail = () => {
               >
                 <figure>
                   <div className="relative aspect-[5/6] overflow-hidden rounded border border-border">
-                    <motion.img
-                      src={item.image_url}
+                    <img
+                      src={heroImage}
                       alt={item.name}
-                      initial={{ scale: 1.06 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 1.25, ease: [0.22, 1, 0.36, 1] }}
+                      width={720}
+                      height={864}
+                      fetchPriority="high"
+                      decoding="async"
                       className={`h-full w-full object-cover ${
                         hasAvailableSize ? "" : "saturate-[0.5] brightness-[0.92]"
                       }`}
@@ -221,6 +234,10 @@ export const ProductDetail = () => {
                     {!hasAvailableSize ? (
                       <span className="absolute left-5 top-5 rounded-full bg-background/95 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-destructive">
                         Sold out
+                      </span>
+                    ) : badge ? (
+                      <span className="absolute left-5 top-5 rounded-md bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.04em] text-accent-hover shadow-[0_1px_3px_rgba(42,31,22,0.18)]">
+                        {badge}
                       </span>
                     ) : null}
                   </div>
@@ -243,9 +260,16 @@ export const ProductDetail = () => {
               transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
               className="flex flex-col lg:pt-4"
             >
-              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-accent">
-                {categoryName}
-              </p>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-accent">
+                  {categoryName}
+                </p>
+                {badge ? (
+                  <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-accent-hover">
+                    {badge}
+                  </span>
+                ) : null}
+              </div>
 
               <h1 className="font-serif text-[2.65rem] font-medium leading-[1.12] tracking-[-0.02em] text-foreground md:text-[3.15rem] lg:text-[3.4rem]">
                 {item.name}

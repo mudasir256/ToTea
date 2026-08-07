@@ -2,6 +2,7 @@ import { useLenis } from "@/hooks/useLenis";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { HomeStory } from "@/components/HomeStory";
+import { BestSellers } from "@/components/BestSellers";
 import { Footer } from "@/components/Footer";
 
 const Home = () => {
@@ -13,6 +14,7 @@ const Home = () => {
       <main>
         <Hero />
         <HomeStory />
+        <BestSellers />
       </main>
       <Footer />
     </div>

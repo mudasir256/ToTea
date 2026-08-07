@@ -3,6 +3,7 @@ import { Check, Loader2, Minus, Plus, X } from "lucide-react";
 import { formatMoney } from "@/lib/money";
 import { availableQuantity } from "@/lib/menuStock";
 import { resolveMenuCardImage } from "@/lib/menuImages";
+import { badgeFor } from "@/features/menu/badges";
 import { useDrinkCustomization } from "@/features/menu/useDrinkCustomization";
 import type {
   MenuItemOptionSettings,
@@ -196,6 +197,7 @@ export function DrinkCustomizeModal({
   const quantityLimit = Math.min(MAX_QUANTITY, Math.max(0, selectedQuantity));
   const runningTotalCents = totalUnitPriceCents * quantity;
   const atStandardLimit = selectedStandardIds.length >= maxStandardToppings;
+  const badge = item ? badgeFor(item) : null;
 
   const handleAdd = async () => {
     if (await addToCart()) onClose();
@@ -226,6 +228,11 @@ export function DrinkCustomizeModal({
                       hasAvailableSize ? "" : "saturate-[0.55] brightness-[0.9]"
                     }`}
                   />
+                  {badge ? (
+                    <span className="absolute bottom-3 left-4 rounded-md bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.04em] text-accent-hover shadow-[0_1px_3px_rgba(42,31,22,0.18)]">
+                      {badge}
+                    </span>
+                  ) : null}
                   <DialogPrimitive.Close
                     aria-label="Close"
                     className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-foreground shadow-sm transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

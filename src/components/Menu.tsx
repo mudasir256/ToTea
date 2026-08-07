@@ -6,30 +6,19 @@ import { MenuCardImage } from "@/components/MenuCardImage";
 import { DrinkCustomizeModal } from "@/features/menu/components/DrinkCustomizeModal";
 import { addDefaultToCart } from "@/features/menu/useDrinkCustomization";
 import { badgeFor, chipsFor } from "@/features/menu/badges";
+import { useMenuCatalog } from "@/features/menu/useMenuCatalog";
 import { useCart } from "@/features/cart/CartProvider";
-import { getSupabase } from "@/lib/supabase";
 import { menuItemHasStock } from "@/lib/menuStock";
 import { formatMoney } from "@/lib/money";
 import { preloadMenuImages } from "@/lib/menuImageUrl";
 import { resolveMenuCardImage, resolveToppingCardImage } from "@/lib/menuImages";
-import type {
-  MenuCategory,
-  MenuItemOptionSettings,
-  MenuItemWithVariants,
-  MenuOptionLevel,
-  MenuStockAvailability,
-  MenuTopping,
-} from "@/types/database";
+import type { MenuItemWithVariants } from "@/types/database";
 
 const EXTRAS_PATTERN = /gelato|snack|sauce|topping|food|extra|ice cream/i;
 
 interface MenuProps {
   hideHeader?: boolean;
 }
-
-type MenuCategoryWithItems = MenuCategory & {
-  items: MenuItemWithVariants[];
-};
 
 /** Sentinel tab that drops the category filter entirely. */
 const ALL_TAB = "all";
@@ -50,16 +39,22 @@ function sizeCount(item: MenuItemWithVariants) {
 
 export const Menu = ({ hideHeader = false }: MenuProps) => {
   const { addItem, itemCount, subtotalCents } = useCart();
-  const [categories, setCategories] = useState<MenuCategoryWithItems[]>([]);
-  const [toppings, setToppings] = useState<MenuTopping[]>([]);
-  const [stock, setStock] = useState<MenuStockAvailability[]>([]);
-  const [optionLevels, setOptionLevels] = useState<MenuOptionLevel[]>([]);
-  const [itemOptionSettings, setItemOptionSettings] = useState<
-    Record<string, MenuItemOptionSettings>
-  >({});
-  const [itemToppingIds, setItemToppingIds] = useState<Record<string, string[]>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: catalog,
+    isPending: loading,
+    error: catalogError,
+  } = useMenuCatalog();
+  const categories = catalog?.categories ?? [];
+  const toppings = catalog?.toppings ?? [];
+  const stock = catalog?.stock ?? [];
+  const optionLevels = catalog?.optionLevels ?? [];
+  const itemOptionSettings = catalog?.itemOptionSettings ?? {};
+  const itemToppingIds = catalog?.itemToppingIds ?? {};
+  const error = catalogError
+    ? catalogError instanceof Error
+      ? catalogError.message
+      : "We could not load the menu. Please try again."
+    : null;
   /** Start on the first category so only ~3–8 images compete on first paint. */
   const [activeCategoryId, setActiveCategoryId] = useState<string>("");
   const [query, setQuery] = useState("");
@@ -67,125 +62,19 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
   const [activeItem, setActiveItem] = useState<MenuItemWithVariants | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadMenu() {
-      const supabase = getSupabase();
-      if (!supabase) {
-        setError("The menu is temporarily unavailable.");
-        setLoading(false);
-        return;
+    if (!catalog?.categories.length) return;
+    setActiveCategoryId((current) => {
+      if (current && current !== ALL_TAB && catalog.categories.some((category) => category.id === current)) {
+        return current;
       }
-
-      const [
-        categoryResult,
-        itemResult,
-        toppingResult,
-        stockResult,
-        levelResult,
-        settingsResult,
-        itemToppingsResult,
-      ] = await Promise.all([
-        supabase
-          .from("menu_categories")
-          .select("*")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("menu_items")
-          .select("*, menu_item_variants(*)")
-          .eq("is_available", true)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("menu_toppings")
-          .select("*")
-          .eq("is_available", true)
-          .order("sort_order", { ascending: true }),
-        supabase.rpc("get_public_menu_stock", {
-          p_menu_item_id: null,
-        }),
-        supabase
-          .from("menu_option_levels")
-          .select("id, kind, name, sort_order, is_default, is_active")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("menu_item_option_settings")
-          .select(
-            "menu_item_id, sugar_enabled, ice_enabled, standard_toppings_enabled, cream_toppings_enabled, default_sugar_level_id, default_ice_level_id, included_cream_topping_id, included_standard_topping_id",
-          ),
-        supabase.from("menu_item_toppings").select("menu_item_id, topping_id"),
-      ]);
-
-      if (cancelled) return;
-      if (
-        categoryResult.error || itemResult.error ||
-        toppingResult.error || stockResult.error
-      ) {
-        console.error(
-          categoryResult.error ?? itemResult.error ?? toppingResult.error ?? stockResult.error,
-        );
-        setError("We could not load the menu. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      if (levelResult.error) {
-        console.error("Unable to load sugar/ice levels", levelResult.error);
-      }
-      if (settingsResult.error) {
-        console.error("Unable to load item option settings", settingsResult.error);
-      }
-      if (itemToppingsResult.error) {
-        console.error("Unable to load item topping links", itemToppingsResult.error);
-      }
-
-      const items = (itemResult.data ?? []) as MenuItemWithVariants[];
-      const grouped = ((categoryResult.data ?? []) as MenuCategory[])
-        .map((category) => ({
-          ...category,
-          items: items.filter((item) => item.category_id === category.id),
-        }))
-        .filter((category) => category.items.length > 0);
-
-      const settingsMap: Record<string, MenuItemOptionSettings> = {};
-      for (const row of (settingsResult.data ?? []) as MenuItemOptionSettings[]) {
-        settingsMap[row.menu_item_id] = row;
-      }
-
-      const toppingIdsMap: Record<string, string[]> = {};
-      for (const row of (itemToppingsResult.data ?? []) as Array<{
-        menu_item_id: string;
-        topping_id: string;
-      }>) {
-        (toppingIdsMap[row.menu_item_id] ??= []).push(row.topping_id);
-      }
-
-      setCategories(grouped);
-      setToppings((toppingResult.data ?? []) as MenuTopping[]);
-      setStock((stockResult.data ?? []) as MenuStockAvailability[]);
-      setOptionLevels((levelResult.data ?? []) as MenuOptionLevel[]);
-      setItemOptionSettings(settingsMap);
-      setItemToppingIds(toppingIdsMap);
-      setActiveCategoryId((current) => {
-        if (current && current !== ALL_TAB && grouped.some((category) => category.id === current)) {
-          return current;
-        }
-        return grouped[0]?.id ?? ALL_TAB;
-      });
-      const firstCategoryItems = grouped[0]?.items ?? items.slice(0, 6);
-      preloadMenuImages(
-        firstCategoryItems.map((item) => resolveMenuCardImage(item.name, item.image_url)),
-        8,
-      );
-      setLoading(false);
-    }
-
-    void loadMenu();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      return catalog.categories[0]?.id ?? ALL_TAB;
+    });
+    const firstCategoryItems = catalog.categories[0]?.items ?? [];
+    preloadMenuImages(
+      firstCategoryItems.map((item) => resolveMenuCardImage(item.name, item.image_url)),
+      8,
+    );
+  }, [catalog]);
 
   const trimmedQuery = query.trim().toLowerCase();
 
@@ -270,11 +159,10 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
     });
   };
 
-  const renderCard = (item: MenuItemWithVariants, index: number) => {
+  const renderCard = (item: MenuItemWithVariants, index: number, priority = false) => {
     const inStock = menuItemHasStock(stock, item.id);
-    const badge = badgeFor(item.name);
+    const badge = badgeFor(item);
     const chips = chipsFor(item.allergens, sizeCount(item));
-    const priority = index < 6;
 
     return (
       <motion.article
@@ -481,26 +369,33 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                     : "Nothing in this category yet."}
                 </div>
               ) : (
-                visibleSections.map((section) =>
-                  section.items.length === 0 ? null : (
-                    <div key={section.id} id={`cat-${section.id}`} className="scroll-mt-40 pb-10">
-                      {showingExtras ? (
-                        <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-hover">
-                          Food &amp; Extras
+                (() => {
+                  let priorityBudget = 0;
+                  return visibleSections.map((section) =>
+                    section.items.length === 0 ? null : (
+                      <div key={section.id} id={`cat-${section.id}`} className="scroll-mt-40 pb-10">
+                        {showingExtras ? (
+                          <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-hover">
+                            Food &amp; Extras
+                          </div>
+                        ) : null}
+                        <div className="font-serif text-[20px] font-semibold text-foreground">
+                          {section.name}
                         </div>
-                      ) : null}
-                      <div className="font-serif text-[20px] font-semibold text-foreground">
-                        {section.name}
+                        <p className="mb-[22px] mt-0.5 text-[13px] text-muted-foreground">
+                          {section.description}
+                        </p>
+                        <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
+                          {section.items.map((item, index) => {
+                            const priority = priorityBudget < 6;
+                            if (priority) priorityBudget += 1;
+                            return renderCard(item, index, priority);
+                          })}
+                        </div>
                       </div>
-                      <p className="mb-[22px] mt-0.5 text-[13px] text-muted-foreground">
-                        {section.description}
-                      </p>
-                      <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
-                        {section.items.map((item, index) => renderCard(item, index))}
-                      </div>
-                    </div>
-                  ),
-                )
+                    ),
+                  );
+                })()
               )}
 
               {showingExtras && toppings.length > 0 ? (

@@ -29,7 +29,16 @@ const AccountSettingsPage = lazy(() => import("./pages/account/AccountSettingsPa
 const OrderHistoryPage = lazy(() => import("./pages/account/OrderHistoryPage"));
 const OrderDetailsPage = lazy(() => import("./pages/account/OrderDetailsPage"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
