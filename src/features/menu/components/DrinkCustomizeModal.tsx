@@ -167,6 +167,7 @@ export function DrinkCustomizeModal({
     clearCream,
     includedCreamToppingId,
     includedCreamTopping,
+    includedStandardTopping,
     maxCreamToppings,
     selectedStandardIds,
     toggleStandardTopping,
@@ -352,9 +353,11 @@ export function DrinkCustomizeModal({
                             : "Toppings · max 2"
                         }
                         description={
-                          includesFreeTopping
-                            ? "1 topping included free with this drink"
-                            : "No included topping for this category — all add-ons are priced"
+                          includedStandardTopping
+                            ? `${includedStandardTopping.name} comes with this drink — add more, swap it, or remove it if you'd rather.`
+                            : includesFreeTopping
+                              ? "1 topping included free with this drink"
+                              : "No included topping for this category — all add-ons are priced"
                         }
                       >
                         {standardToppings.map((topping) => {
@@ -369,11 +372,7 @@ export function DrinkCustomizeModal({
                               name={topping.name}
                               included={included}
                               priceLabel={
-                                included
-                                  ? "Free"
-                                  : priceCents > 0
-                                    ? `+${formatMoney(priceCents)}`
-                                    : "Free"
+                                priceCents > 0 ? `+${formatMoney(priceCents)}` : "Free"
                               }
                               onSelect={() => toggleStandardTopping(topping.id)}
                             />

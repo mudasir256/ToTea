@@ -127,6 +127,8 @@ export type MenuItemOptionSettings = {
   default_ice_level_id: string | null;
   /** Cream topping that comes with the drink recipe (shown as Included). */
   included_cream_topping_id?: string | null;
+  /** Standard topping that comes with the drink (shown as Included). */
+  included_standard_topping_id?: string | null;
 };
 
 export type Review = {

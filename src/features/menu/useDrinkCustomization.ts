@@ -184,15 +184,20 @@ export function useDrinkCustomization(
     () => creamToppings.find((topping) => topping.id === includedCreamToppingId) ?? null,
     [creamToppings, includedCreamToppingId],
   );
+  const includedStandardToppingId = itemSettings?.included_standard_topping_id ?? null;
+  const includedStandardTopping = useMemo(
+    () => standardToppings.find((topping) => topping.id === includedStandardToppingId) ?? null,
+    [standardToppings, includedStandardToppingId],
+  );
   /** Included cream + one paid cream, or a single paid cream when none is included. */
   const maxCreamToppings = includedCreamToppingId ? 2 : 1;
 
   useEffect(() => {
     setStock(initialStock);
-    setSelectedStandardIds([]);
     setQuantity(1);
     if (!item) {
       setSelectedCreamIds([]);
+      setSelectedStandardIds([]);
       setSelectedSize("");
       setSelectedSweetness(DEFAULT_SWEETNESS);
       setSelectedIce(DEFAULT_ICE);
@@ -206,22 +211,37 @@ export function useDrinkCustomization(
         .map((variant) => variant.size)
         .find((size) => availableQuantity(initialStock, item.id, size) > 0) ?? "",
     );
-    const includedId = itemSettings?.included_cream_topping_id ?? null;
-    const includedAllowed =
-      includedId &&
-      (!allowedToppingIdSet || allowedToppingIdSet.has(includedId)) &&
-      toppings.some((topping) => topping.id === includedId && topping.category === "cream");
-    setSelectedCreamIds(includedAllowed && includedId ? [includedId] : []);
+    const includedCreamId = itemSettings?.included_cream_topping_id ?? null;
+    const creamAllowed =
+      includedCreamId &&
+      (!allowedToppingIdSet || allowedToppingIdSet.has(includedCreamId)) &&
+      toppings.some((topping) => topping.id === includedCreamId && topping.category === "cream");
+    setSelectedCreamIds(creamAllowed && includedCreamId ? [includedCreamId] : []);
+
+    const includedStandardId = itemSettings?.included_standard_topping_id ?? null;
+    const standardAllowed =
+      includedStandardId &&
+      (!allowedToppingIdSet || allowedToppingIdSet.has(includedStandardId)) &&
+      toppings.some(
+        (topping) => topping.id === includedStandardId && topping.category === "standard",
+      );
+    setSelectedStandardIds(
+      standardAllowed && includedStandardId ? [includedStandardId] : [],
+    );
   }, [item, initialStock, optionLevels, itemSettings, allowedToppingIdSet, toppings]);
 
-  const includesFreeTopping = Boolean(item && drinkIncludesFreeTopping(item.name));
+  const includesFreeTopping = Boolean(
+    includedStandardToppingId || (item && drinkIncludesFreeTopping(item.name)),
+  );
   const maxStandardToppings = includesFreeTopping
     ? MAX_STANDARD_TOPPINGS_MILK_TEA
     : MAX_STANDARD_TOPPINGS_DEFAULT;
-  /** First selected standard topping is free on milk tea. */
-  const freeStandardToppingId = includesFreeTopping
-    ? (selectedStandardIds[0] ?? null)
-    : null;
+  /** Admin-included standard topping, else first selected free on milk tea. */
+  const freeStandardToppingId = includedStandardToppingId
+    ? includedStandardToppingId
+    : includesFreeTopping
+      ? (selectedStandardIds[0] ?? null)
+      : null;
 
   const selectedToppings: CartToppingSelection[] = useMemo(() => {
     const creams = creamToppings.filter((topping) => selectedCreamIds.includes(topping.id));
@@ -230,7 +250,11 @@ export function useDrinkCustomization(
     );
     return [...creams, ...standards].map((topping) => {
       const selection = toSelection(topping);
-      if (topping.id === freeStandardToppingId || topping.id === includedCreamToppingId) {
+      if (
+        topping.id === freeStandardToppingId ||
+        topping.id === includedCreamToppingId ||
+        topping.id === includedStandardToppingId
+      ) {
         return { ...selection, price_cents: 0 };
       }
       return selection;
@@ -242,6 +266,7 @@ export function useDrinkCustomization(
     selectedStandardIds,
     freeStandardToppingId,
     includedCreamToppingId,
+    includedStandardToppingId,
   ]);
 
   const toppingsPriceCents = useMemo(
@@ -391,6 +416,8 @@ export function useDrinkCustomization(
     clearCream,
     includedCreamToppingId,
     includedCreamTopping,
+    includedStandardToppingId,
+    includedStandardTopping,
     maxCreamToppings,
     selectedStandardIds,
     toggleStandardTopping,

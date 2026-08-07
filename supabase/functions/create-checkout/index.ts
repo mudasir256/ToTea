@@ -178,12 +178,18 @@ serve(async (req) => {
 
     const { data: optionSettings } = await admin
       .from("menu_item_option_settings")
-      .select("menu_item_id, included_cream_topping_id")
+      .select("menu_item_id, included_cream_topping_id, included_standard_topping_id")
       .in("menu_item_id", menuItemIds);
     const includedCreamByMenuItem = new Map(
       (optionSettings ?? []).map((row) => [
         row.menu_item_id as string,
         (row.included_cream_topping_id as string | null) ?? null,
+      ]),
+    );
+    const includedStandardByMenuItem = new Map(
+      (optionSettings ?? []).map((row) => [
+        row.menu_item_id as string,
+        (row.included_standard_topping_id as string | null) ?? null,
       ]),
     );
 
@@ -298,13 +304,22 @@ serve(async (req) => {
       const includesFreeTopping =
         /milk\s*tea|boba\s*milk|brown\s*sugar/i.test(menuItem.name);
       const includedCreamId = includedCreamByMenuItem.get(menuItem.id) ?? null;
+      const includedStandardId = includedStandardByMenuItem.get(menuItem.id) ?? null;
       let freeStandardApplied = false;
       const pricedToppings = selectedToppings.map((topping) => {
         if (includedCreamId && topping.id === includedCreamId) {
           return { ...topping, price: 0 };
         }
+        if (includedStandardId && topping.id === includedStandardId) {
+          return { ...topping, price: 0 };
+        }
         const isStandard = String(topping.category).toLowerCase() === "standard";
-        if (includesFreeTopping && isStandard && !freeStandardApplied) {
+        if (
+          !includedStandardId &&
+          includesFreeTopping &&
+          isStandard &&
+          !freeStandardApplied
+        ) {
           freeStandardApplied = true;
           return { ...topping, price: 0 };
         }
