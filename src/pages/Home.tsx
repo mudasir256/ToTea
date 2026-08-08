@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { HomeStory } from "@/components/HomeStory";
 import { BestSellers } from "@/components/BestSellers";
+import { OrderOnline } from "@/components/OrderOnline";
 import { Footer } from "@/components/Footer";
 
 const Home = () => {
@@ -15,6 +16,7 @@ const Home = () => {
         <Hero />
         <HomeStory />
         <BestSellers />
+        <OrderOnline />
       </main>
       <Footer />
     </div>
@@ -22,3 +24,4 @@ const Home = () => {
 };
 
 export default Home;
+

@@ -5,7 +5,7 @@ import { Loader2, Plus, Search } from "lucide-react";
 import { MenuCardImage } from "@/components/MenuCardImage";
 import { DrinkCustomizeModal } from "@/features/menu/components/DrinkCustomizeModal";
 import { addDefaultToCart } from "@/features/menu/useDrinkCustomization";
-import { badgeFor, chipsFor } from "@/features/menu/badges";
+import { badgeFor, chipsFor, MARKETING_BADGE_STYLES } from "@/features/menu/badges";
 import { useMenuCatalog } from "@/features/menu/useMenuCatalog";
 import { useCart } from "@/features/cart/CartProvider";
 import { menuItemHasStock } from "@/lib/menuStock";
@@ -44,7 +44,7 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
     isPending: loading,
     error: catalogError,
   } = useMenuCatalog();
-  const categories = catalog?.categories ?? [];
+  const categories = useMemo(() => catalog?.categories ?? [], [catalog?.categories]);
   const toppings = catalog?.toppings ?? [];
   const stock = catalog?.stock ?? [];
   const optionLevels = catalog?.optionLevels ?? [];
@@ -201,7 +201,11 @@ export const Menu = ({ hideHeader = false }: MenuProps) => {
                 Sold out
               </span>
             ) : badge ? (
-              <span className="absolute left-2.5 top-2.5 z-10 whitespace-nowrap rounded-md bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.04em] text-accent-hover shadow-[0_1px_3px_rgba(42,31,22,0.18)]">
+              <span
+                className={`absolute left-2.5 top-2.5 z-10 whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.04em] shadow-[0_1px_3px_rgba(42,31,22,0.18)] ${
+                  MARKETING_BADGE_STYLES[badge] || "bg-white text-accent-hover"
+                }`}
+              >
                 {badge}
               </span>
             ) : null}

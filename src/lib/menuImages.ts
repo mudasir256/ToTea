@@ -41,25 +41,81 @@ export const toppingImageMap: Record<string, string> = {
   "Egg Cream": "/toppings/egg-cream.webp",
 };
 
+export const DEFAULT_MENU_IMAGE = "/menu/classic-milk-tea.webp";
+export const DEFAULT_TOPPING_IMAGE = "/toppings/honey-boba.webp";
+
 export const getMenuImage = (itemName: string): string | undefined => {
-  return menuImageMap[itemName];
+  if (!itemName) return DEFAULT_MENU_IMAGE;
+  if (menuImageMap[itemName]) return menuImageMap[itemName];
+
+  const lower = itemName.toLowerCase();
+  
+  if (lower.includes("vietnamese") || lower.includes("coffee") || lower.includes("salt")) {
+    if (lower.includes("ube")) return menuImageMap["Ube Vietnamese Coffee"];
+    if (lower.includes("egg")) return menuImageMap["Egg Vietnamese Coffee"];
+    return menuImageMap["Vietnamese Sea Salt Coffee"];
+  }
+  if (lower.includes("brown sugar")) {
+    if (lower.includes("crème") || lower.includes("creme") || lower.includes("brulee")) return menuImageMap["Crème Brûlée Brown Sugar Milk"];
+    if (lower.includes("tea")) return menuImageMap["Brown Sugar Milk Tea"];
+    return menuImageMap["Brown Sugar Milk"];
+  }
+  if (lower.includes("thai")) return menuImageMap["Thai Milk Tea"];
+  if (lower.includes("ube")) return lower.includes("smoothie") ? menuImageMap["Ube Smoothie"] : menuImageMap["Ube Milk Tea"];
+  if (lower.includes("matcha")) {
+    if (lower.includes("strawberry")) return menuImageMap["Strawberry Matcha Latte"];
+    if (lower.includes("mango")) return menuImageMap["Mango Matcha Latte"];
+    if (lower.includes("coconut")) return menuImageMap["Coconut Matcha"];
+    if (lower.includes("smoothie")) return menuImageMap["Matcha Smoothie"];
+    return menuImageMap["Matcha Latte"];
+  }
+  if (lower.includes("mango")) {
+    if (lower.includes("sago") || lower.includes("coconut")) return menuImageMap["Mango Sago Coconut Milk"];
+    return menuImageMap["Mango Milk Tea"];
+  }
+  if (lower.includes("smoothie") || lower.includes("avocado")) return menuImageMap["Avocado Smoothie"];
+  if (lower.includes("jasmine")) return menuImageMap["Sea Salt Jasmine Tea"];
+  if (lower.includes("oolong")) return lower.includes("peach") ? menuImageMap["Peach Oolong Tea"] : menuImageMap["Roasted Oolong Milk Tea"];
+  if (lower.includes("strawberry") || lower.includes("passion")) return menuImageMap["Strawberry Passionfruit Tea"];
+  if (lower.includes("grapefruit")) return menuImageMap["Grapefruit Tea"];
+  if (lower.includes("honeydew")) return menuImageMap["Honeydew Milk Tea"];
+  if (lower.includes("horchata")) return menuImageMap["Horchata Milk Tea"];
+  if (lower.includes("pistachio")) return menuImageMap["Pistachio Milk Tea"];
+  if (lower.includes("milk tea") || lower.includes("classic")) return menuImageMap["Classic Milk Tea"];
+
+  return DEFAULT_MENU_IMAGE;
 };
 
 export const getToppingImage = (toppingName: string): string | undefined => {
-  return toppingImageMap[toppingName];
+  if (!toppingName) return DEFAULT_TOPPING_IMAGE;
+  if (toppingImageMap[toppingName]) return toppingImageMap[toppingName];
+
+  const lower = toppingName.toLowerCase();
+  if (lower.includes("boba") || lower.includes("tapioca") || lower.includes("pearl")) return toppingImageMap["Honey Boba"];
+  if (lower.includes("jelly") || lower.includes("aloe") || lower.includes("pudding")) return toppingImageMap["Jelly"];
+  if (lower.includes("ube")) return toppingImageMap["Ube Cream"];
+  if (lower.includes("matcha")) return toppingImageMap["Matcha Cream"];
+  if (lower.includes("egg")) return toppingImageMap["Egg Cream"];
+  if (lower.includes("salt") || lower.includes("cream") || lower.includes("foam")) return toppingImageMap["Sea Salt Cream"];
+
+  return DEFAULT_TOPPING_IMAGE;
 };
 
-/** Prefer local optimized card image; fall back to Supabase URL. */
+/** Prefer local optimized card image; fall back to Supabase URL or default boba image. */
 export function resolveMenuCardImage(
   name: string,
   remoteUrl?: string | null,
 ): string {
-  return getMenuImage(name) || (remoteUrl ?? "").trim();
+  const remote = (remoteUrl ?? "").trim();
+  if (remote) return remote;
+  return getMenuImage(name) || DEFAULT_MENU_IMAGE;
 }
 
 export function resolveToppingCardImage(
   name: string,
   remoteUrl?: string | null,
 ): string {
-  return getToppingImage(name) || (remoteUrl ?? "").trim();
+  const remote = (remoteUrl ?? "").trim();
+  if (remote) return remote;
+  return getToppingImage(name) || DEFAULT_TOPPING_IMAGE;
 }

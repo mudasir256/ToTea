@@ -90,6 +90,19 @@ export default function LoginPage() {
           Sign in
         </Button>
       </form>
+      <div className="mt-3">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            form.setValue("email", "test@totea.com");
+            form.setValue("password", "TestUser@1234");
+          }}
+        >
+          ⚡ Quick Test Fill (test@totea.com)
+        </Button>
+      </div>
       <div className="my-6 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
         <span className="text-xs uppercase tracking-wide text-muted-foreground">Or</span>

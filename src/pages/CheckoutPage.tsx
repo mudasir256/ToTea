@@ -60,8 +60,16 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const draft = (location.state as CartDraft | null) ?? {};
-  const { ready: squareReady, error: squareError, tokenize } = useSquareCard(
+  const {
+    ready: squareReady,
+    applePayReady,
+    applePayError,
+    error: squareError,
+    tokenize,
+    tokenizeApplePay,
+  } = useSquareCard(
     "square-card-container-checkout",
+    "square-apple-pay-container-checkout",
   );
   const { promos, firstOrderEligible } = useCustomerPromos(user?.id);
 
@@ -347,7 +355,10 @@ export default function CheckoutPage() {
               </p>
               <SquareCardField
                 containerId="square-card-container-checkout"
+                applePayContainerId="square-apple-pay-container-checkout"
                 ready={squareReady}
+                applePayReady={applePayReady}
+                applePayError={applePayError}
                 error={squareError}
               />
             </section>

@@ -57,7 +57,7 @@ export const ProductBottleScroll = ({ product, containerRef }: ProductBottleScro
               // Get the image URL from the module
               const imageUrl = typeof module === 'string' 
                 ? module 
-                : (module as any)?.default || module;
+                : (module as { default?: string })?.default || module;
               if (imageUrl) {
                 img.src = imageUrl;
               } else {
@@ -158,7 +158,7 @@ export const ProductBottleScroll = ({ product, containerRef }: ProductBottleScro
       let drawWidth = displayWidth;
       let drawHeight = displayHeight;
       let offsetX = 0;
-      let offsetY = 0;
+      const offsetY = 0;
 
       if (imgAspect > canvasAspect) {
         // Image is wider - fit to height, crop width

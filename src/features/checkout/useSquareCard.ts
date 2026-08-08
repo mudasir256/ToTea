@@ -1,17 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 
+type SquareTokenResult = {
+  status: string;
+  token?: string;
+  errors?: Array<{ message: string }>;
+};
+
 type SquareCard = {
   attach: (selector: string) => Promise<void>;
-  tokenize: (details?: unknown) => Promise<{
-    status: string;
-    token?: string;
-    errors?: Array<{ message: string }>;
-  }>;
+  tokenize: (details?: unknown) => Promise<SquareTokenResult>;
+  destroy?: () => Promise<void>;
+};
+
+type SquareApplePay = {
+  attach: (selector: string) => Promise<void>;
+  tokenize: () => Promise<SquareTokenResult>;
   destroy?: () => Promise<void>;
 };
 
 type SquarePayments = {
   card: () => Promise<SquareCard>;
+  paymentRequest: (options: unknown) => unknown;
+  applePay: (request: unknown) => Promise<SquareApplePay>;
 };
 
 declare global {
@@ -44,7 +54,6 @@ function loadSquareSdk(environment: string): Promise<void> {
         () => reject(new Error("Failed to load Square Web Payments SDK")),
         { once: true },
       );
-      // Script may already be loaded but Square global not yet visible.
       setTimeout(() => {
         if (window.Square) resolve();
       }, 0);
@@ -87,10 +96,16 @@ function formatSquareError(err: unknown): string {
   return String(err);
 }
 
-export function useSquareCard(containerId = "square-card-container") {
+export function useSquareCard(
+  containerId = "square-card-container",
+  applePayContainerId = "square-apple-pay-container",
+) {
   const [ready, setReady] = useState(false);
+  const [applePayReady, setApplePayReady] = useState(false);
+  const [applePayError, setApplePayError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cardRef = useRef<SquareCard | null>(null);
+  const applePayRef = useRef<SquareApplePay | null>(null);
   const initIdRef = useRef(0);
 
   useEffect(() => {
@@ -103,6 +118,8 @@ export function useSquareCard(containerId = "square-card-container") {
 
     async function init() {
       setReady(false);
+      setApplePayReady(false);
+      setApplePayError(null);
       setError(null);
 
       if (!appId || !locationId || appId.includes("xxxxxxxx")) {
@@ -130,6 +147,7 @@ export function useSquareCard(containerId = "square-card-container") {
         const payments = await Promise.resolve(window.Square.payments(appId, locationId));
         if (cancelled || initId !== initIdRef.current) return;
 
+        // 1. Initialize Credit Card Form
         const card = await payments.card();
         await card.attach(`#${CSS.escape(containerId)}`);
         if (cancelled || initId !== initIdRef.current) {
@@ -139,6 +157,30 @@ export function useSquareCard(containerId = "square-card-container") {
 
         cardRef.current = card;
         setReady(true);
+
+        // 2. Try Initializing Apple Pay if container exists
+        const appleContainer = await waitForContainer(applePayContainerId, 10);
+        if (appleContainer && typeof payments.paymentRequest === "function") {
+          try {
+            appleContainer.innerHTML = "";
+            const req = payments.paymentRequest({
+              countryCode: "US",
+              currencyCode: "USD",
+              total: { amount: "1.00", label: "ToTea Order" },
+            });
+            const applePay = await payments.applePay(req);
+            await applePay.attach(`#${CSS.escape(applePayContainerId)}`);
+            if (!cancelled && initId === initIdRef.current) {
+              applePayRef.current = applePay;
+              setApplePayReady(true);
+            }
+          } catch (appleErr) {
+            const msg = formatSquareError(appleErr);
+            console.log("[Apple Pay diagnostic note]", msg);
+            setApplePayError(msg);
+            setApplePayReady(false);
+          }
+        }
       } catch (err) {
         console.error("[Square card init]", err);
         if (!cancelled && initId === initIdRef.current) {
@@ -155,15 +197,37 @@ export function useSquareCard(containerId = "square-card-container") {
       const card = cardRef.current;
       cardRef.current = null;
       void card?.destroy?.().catch(() => undefined);
+
+      const applePay = applePayRef.current;
+      applePayRef.current = null;
+      void applePay?.destroy?.().catch(() => undefined);
     };
-  }, [containerId]);
+  }, [containerId, applePayContainerId]);
 
   const tokenize = async (details?: unknown) => {
+    if (applePayRef.current && applePayReady) {
+      try {
+        const appleTokenResult = await applePayRef.current.tokenize();
+        if (appleTokenResult && appleTokenResult.status === "OK" && appleTokenResult.token) {
+          return appleTokenResult;
+        }
+      } catch (err) {
+        console.log("[Apple Pay tokenization note]", err);
+      }
+    }
     if (!cardRef.current) {
       throw new Error("Payment form is not ready.");
     }
     return cardRef.current.tokenize(details);
   };
 
-  return { ready, error, tokenize };
+  const tokenizeApplePay = async () => {
+    if (!applePayRef.current) {
+      throw new Error("Apple Pay is not available on this device.");
+    }
+    return applePayRef.current.tokenize();
+  };
+
+  return { ready, applePayReady, applePayError, error, tokenize, tokenizeApplePay };
 }
+

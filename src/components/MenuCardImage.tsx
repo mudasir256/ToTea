@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { MENU_CARD_IMAGE_HEIGHT, MENU_CARD_IMAGE_WIDTH } from "@/lib/menuImageUrl";
+import { DEFAULT_MENU_IMAGE } from "@/lib/menuImages";
 
 type MenuCardImageProps = {
   src: string;
@@ -16,14 +18,16 @@ export function MenuCardImage({
   className,
   imgClassName,
 }: MenuCardImageProps) {
-  if (!src) {
-    return <div className={cn("relative h-[180px] overflow-hidden bg-[#efe8df]", className)} />;
-  }
+  const [imgSrc, setImgSrc] = useState(src || DEFAULT_MENU_IMAGE);
+
+  useEffect(() => {
+    setImgSrc(src || DEFAULT_MENU_IMAGE);
+  }, [src]);
 
   return (
-    <div className={cn("relative h-[180px] overflow-hidden bg-[#efe8df]", className)}>
+    <div className={cn("relative h-[210px] overflow-hidden bg-[#f8f5f0] p-3 flex items-center justify-center", className)}>
       <img
-        src={src}
+        src={imgSrc}
         alt={alt}
         width={MENU_CARD_IMAGE_WIDTH}
         height={MENU_CARD_IMAGE_HEIGHT}
@@ -31,7 +35,8 @@ export function MenuCardImage({
         decoding="async"
         fetchPriority={priority ? "high" : "low"}
         sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 340px"
-        className={cn("h-full w-full object-cover", imgClassName)}
+        onError={() => setImgSrc(DEFAULT_MENU_IMAGE)}
+        className={cn("h-full w-full object-contain drop-shadow-sm transition-all duration-300 group-hover:scale-105", imgClassName)}
       />
     </div>
   );

@@ -7,7 +7,7 @@ const orderPlatforms = [
     description: 'Shop the menu, checkout securely with Square',
     color: 'bg-amber-600',
     icon: '🧋',
-    href: '/cart',
+    href: '/menu',
   },
   {
     name: 'Toast Pick-Up',

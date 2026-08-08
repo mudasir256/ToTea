@@ -231,7 +231,7 @@ export function DrinkCustomizeModal({
           {item ? (
             <>
               <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
-                <div className="relative shrink-0 sm:w-[42%]">
+                <div className="relative flex shrink-0 items-center justify-center bg-[#f8f5f0] p-4 sm:w-[42%] sm:rounded-l-[28px]">
                   <img
                     src={resolveMenuCardImage(item.name, item.image_url)}
                     alt={item.name}
@@ -239,7 +239,7 @@ export function DrinkCustomizeModal({
                     height={360}
                     decoding="async"
                     fetchPriority="high"
-                    className={`h-44 w-full object-cover sm:h-full sm:rounded-l-[28px] ${
+                    className={`max-h-[300px] sm:max-h-[340px] w-full object-contain drop-shadow-md transition-transform duration-300 hover:scale-105 ${
                       hasAvailableSize ? "" : "saturate-[0.55] brightness-[0.9]"
                     }`}
                   />
